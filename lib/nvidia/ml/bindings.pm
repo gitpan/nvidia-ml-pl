@@ -49,9 +49,16 @@ sub this {
 
 package nvidia::ml::bindings;
 
+*new_nvmlHwbcEntry = *bindingsc::new_nvmlHwbcEntry;
+*delete_nvmlHwbcEntry = *bindingsc::delete_nvmlHwbcEntry;
+*nvmlHwbcEntry_getitem = *bindingsc::nvmlHwbcEntry_getitem;
+*nvmlHwbcEntry_setitem = *bindingsc::nvmlHwbcEntry_setitem;
 *nvmlInit = *bindingsc::nvmlInit;
 *nvmlShutdown = *bindingsc::nvmlShutdown;
+*nvmlErrorString = *bindingsc::nvmlErrorString;
 *nvmlSystemGetDriverVersion = *bindingsc::nvmlSystemGetDriverVersion;
+*nvmlSystemGetNVMLVersion = *bindingsc::nvmlSystemGetNVMLVersion;
+*nvmlSystemGetProcessName = *bindingsc::nvmlSystemGetProcessName;
 *nvmlUnitGetCount = *bindingsc::nvmlUnitGetCount;
 *nvmlUnitGetHandleByIndex = *bindingsc::nvmlUnitGetHandleByIndex;
 *nvmlUnitGetUnitInfo = *bindingsc::nvmlUnitGetUnitInfo;
@@ -60,6 +67,7 @@ package nvidia::ml::bindings;
 *nvmlUnitGetTemperature = *bindingsc::nvmlUnitGetTemperature;
 *nvmlUnitGetFanSpeedInfo = *bindingsc::nvmlUnitGetFanSpeedInfo;
 *nvmlUnitGetDevices = *bindingsc::nvmlUnitGetDevices;
+*nvmlSystemGetHicVersion = *bindingsc::nvmlSystemGetHicVersion;
 *nvmlDeviceGetCount = *bindingsc::nvmlDeviceGetCount;
 *nvmlDeviceGetHandleByIndex = *bindingsc::nvmlDeviceGetHandleByIndex;
 *nvmlDeviceGetHandleBySerial = *bindingsc::nvmlDeviceGetHandleBySerial;
@@ -70,10 +78,12 @@ package nvidia::ml::bindings;
 *nvmlDeviceGetInforomVersion = *bindingsc::nvmlDeviceGetInforomVersion;
 *nvmlDeviceGetDisplayMode = *bindingsc::nvmlDeviceGetDisplayMode;
 *nvmlDeviceGetPersistenceMode = *bindingsc::nvmlDeviceGetPersistenceMode;
-*nvmlDeviceGetPciInfo = *bindingsc::nvmlDeviceGetPciInfo;
+*nvmlDeviceGetPciInfo_v2 = *bindingsc::nvmlDeviceGetPciInfo_v2;
 *nvmlDeviceGetClockInfo = *bindingsc::nvmlDeviceGetClockInfo;
+*nvmlDeviceGetMaxClockInfo = *bindingsc::nvmlDeviceGetMaxClockInfo;
 *nvmlDeviceGetFanSpeed = *bindingsc::nvmlDeviceGetFanSpeed;
 *nvmlDeviceGetTemperature = *bindingsc::nvmlDeviceGetTemperature;
+*nvmlDeviceGetPerformanceState = *bindingsc::nvmlDeviceGetPerformanceState;
 *nvmlDeviceGetPowerState = *bindingsc::nvmlDeviceGetPowerState;
 *nvmlDeviceGetPowerManagementMode = *bindingsc::nvmlDeviceGetPowerManagementMode;
 *nvmlDeviceGetPowerManagementLimit = *bindingsc::nvmlDeviceGetPowerManagementLimit;
@@ -85,17 +95,29 @@ package nvidia::ml::bindings;
 *nvmlDeviceGetDetailedEccErrors = *bindingsc::nvmlDeviceGetDetailedEccErrors;
 *nvmlDeviceGetUtilizationRates = *bindingsc::nvmlDeviceGetUtilizationRates;
 *nvmlDeviceGetDriverModel = *bindingsc::nvmlDeviceGetDriverModel;
+*nvmlDeviceGetVbiosVersion = *bindingsc::nvmlDeviceGetVbiosVersion;
+*nvmlDeviceGetComputeRunningProcesses = *bindingsc::nvmlDeviceGetComputeRunningProcesses;
 *nvmlUnitSetLedState = *bindingsc::nvmlUnitSetLedState;
 *nvmlDeviceSetPersistenceMode = *bindingsc::nvmlDeviceSetPersistenceMode;
 *nvmlDeviceSetComputeMode = *bindingsc::nvmlDeviceSetComputeMode;
 *nvmlDeviceSetEccMode = *bindingsc::nvmlDeviceSetEccMode;
 *nvmlDeviceClearEccErrorCounts = *bindingsc::nvmlDeviceClearEccErrorCounts;
 *nvmlDeviceSetDriverModel = *bindingsc::nvmlDeviceSetDriverModel;
+*nvmlEventSetCreate = *bindingsc::nvmlEventSetCreate;
+*nvmlDeviceRegisterEvents = *bindingsc::nvmlDeviceRegisterEvents;
+*nvmlDeviceGetSupportedEventTypes = *bindingsc::nvmlDeviceGetSupportedEventTypes;
+*nvmlEventSetWait = *bindingsc::nvmlEventSetWait;
+*nvmlEventSetFree = *bindingsc::nvmlEventSetFree;
 *_getFanInfoByIndex = *bindingsc::_getFanInfoByIndex;
 *_getDeviceByIndex = *bindingsc::_getDeviceByIndex;
 *_createDeviceArray = *bindingsc::_createDeviceArray;
 *_freeDeviceArray = *bindingsc::_freeDeviceArray;
+*_createProcessArray = *bindingsc::_createProcessArray;
+*_freeProcessArray = *bindingsc::_freeProcessArray;
 *_nvmlUnitGetDevices = *bindingsc::_nvmlUnitGetDevices;
+*_nvmlDeviceGetComputeRunningProcesses = *bindingsc::_nvmlDeviceGetComputeRunningProcesses;
+*_nvmlGetValueNotAvailable_ulonglong = *bindingsc::_nvmlGetValueNotAvailable_ulonglong;
+*_getProcessByIndex = *bindingsc::_getProcessByIndex;
 
 ############# Class : nvidia::ml::bindings::nvmlPciInfo_t ##############
 
@@ -114,6 +136,16 @@ use vars qw(@ISA %OWNER %ITERATORS %BLESSEDMEMBERS);
 *swig_device_set = *bindingsc::nvmlPciInfo_t_device_set;
 *swig_pciDeviceId_get = *bindingsc::nvmlPciInfo_t_pciDeviceId_get;
 *swig_pciDeviceId_set = *bindingsc::nvmlPciInfo_t_pciDeviceId_set;
+*swig_pciSubSystemId_get = *bindingsc::nvmlPciInfo_t_pciSubSystemId_get;
+*swig_pciSubSystemId_set = *bindingsc::nvmlPciInfo_t_pciSubSystemId_set;
+*swig_reserved0_get = *bindingsc::nvmlPciInfo_t_reserved0_get;
+*swig_reserved0_set = *bindingsc::nvmlPciInfo_t_reserved0_set;
+*swig_reserved1_get = *bindingsc::nvmlPciInfo_t_reserved1_get;
+*swig_reserved1_set = *bindingsc::nvmlPciInfo_t_reserved1_set;
+*swig_reserved2_get = *bindingsc::nvmlPciInfo_t_reserved2_get;
+*swig_reserved2_set = *bindingsc::nvmlPciInfo_t_reserved2_set;
+*swig_reserved3_get = *bindingsc::nvmlPciInfo_t_reserved3_get;
+*swig_reserved3_set = *bindingsc::nvmlPciInfo_t_reserved3_set;
 sub new {
     my $pkg = shift;
     my $self = bindingsc::new_nvmlPciInfo_t(@_);
@@ -256,6 +288,88 @@ sub DESTROY {
     delete $ITERATORS{$self};
     if (exists $OWNER{$self}) {
         bindingsc::delete_nvmlMemory_t($self);
+        delete $OWNER{$self};
+    }
+}
+
+sub DISOWN {
+    my $self = shift;
+    my $ptr = tied(%$self);
+    delete $OWNER{$ptr};
+}
+
+sub ACQUIRE {
+    my $self = shift;
+    my $ptr = tied(%$self);
+    $OWNER{$ptr} = 1;
+}
+
+
+############# Class : nvidia::ml::bindings::nvmlProcessInfo_t ##############
+
+package nvidia::ml::bindings::nvmlProcessInfo_t;
+use vars qw(@ISA %OWNER %ITERATORS %BLESSEDMEMBERS);
+@ISA = qw( bindings );
+%OWNER = ();
+%ITERATORS = ();
+*swig_pid_get = *bindingsc::nvmlProcessInfo_t_pid_get;
+*swig_pid_set = *bindingsc::nvmlProcessInfo_t_pid_set;
+*swig_usedGpuMemory_get = *bindingsc::nvmlProcessInfo_t_usedGpuMemory_get;
+*swig_usedGpuMemory_set = *bindingsc::nvmlProcessInfo_t_usedGpuMemory_set;
+sub new {
+    my $pkg = shift;
+    my $self = bindingsc::new_nvmlProcessInfo_t(@_);
+    bless $self, $pkg if defined($self);
+}
+
+sub DESTROY {
+    return unless $_[0]->isa('HASH');
+    my $self = tied(%{$_[0]});
+    return unless defined $self;
+    delete $ITERATORS{$self};
+    if (exists $OWNER{$self}) {
+        bindingsc::delete_nvmlProcessInfo_t($self);
+        delete $OWNER{$self};
+    }
+}
+
+sub DISOWN {
+    my $self = shift;
+    my $ptr = tied(%$self);
+    delete $OWNER{$ptr};
+}
+
+sub ACQUIRE {
+    my $self = shift;
+    my $ptr = tied(%$self);
+    $OWNER{$ptr} = 1;
+}
+
+
+############# Class : nvidia::ml::bindings::nvmlHwbcEntry_t ##############
+
+package nvidia::ml::bindings::nvmlHwbcEntry_t;
+use vars qw(@ISA %OWNER %ITERATORS %BLESSEDMEMBERS);
+@ISA = qw( bindings );
+%OWNER = ();
+%ITERATORS = ();
+*swig_hwbcId_get = *bindingsc::nvmlHwbcEntry_t_hwbcId_get;
+*swig_hwbcId_set = *bindingsc::nvmlHwbcEntry_t_hwbcId_set;
+*swig_firmwareVersion_get = *bindingsc::nvmlHwbcEntry_t_firmwareVersion_get;
+*swig_firmwareVersion_set = *bindingsc::nvmlHwbcEntry_t_firmwareVersion_set;
+sub new {
+    my $pkg = shift;
+    my $self = bindingsc::new_nvmlHwbcEntry_t(@_);
+    bless $self, $pkg if defined($self);
+}
+
+sub DESTROY {
+    return unless $_[0]->isa('HASH');
+    my $self = tied(%{$_[0]});
+    return unless defined $self;
+    delete $ITERATORS{$self};
+    if (exists $OWNER{$self}) {
+        bindingsc::delete_nvmlHwbcEntry_t($self);
         delete $OWNER{$self};
     }
 }
@@ -486,10 +600,56 @@ sub ACQUIRE {
 }
 
 
+############# Class : nvidia::ml::bindings::nvmlEventData_t ##############
+
+package nvidia::ml::bindings::nvmlEventData_t;
+use vars qw(@ISA %OWNER %ITERATORS %BLESSEDMEMBERS);
+@ISA = qw( bindings );
+%OWNER = ();
+%ITERATORS = ();
+*swig_device_get = *bindingsc::nvmlEventData_t_device_get;
+*swig_device_set = *bindingsc::nvmlEventData_t_device_set;
+*swig_eventType_get = *bindingsc::nvmlEventData_t_eventType_get;
+*swig_eventType_set = *bindingsc::nvmlEventData_t_eventType_set;
+*swig_reserved_get = *bindingsc::nvmlEventData_t_reserved_get;
+*swig_reserved_set = *bindingsc::nvmlEventData_t_reserved_set;
+sub new {
+    my $pkg = shift;
+    my $self = bindingsc::new_nvmlEventData_t(@_);
+    bless $self, $pkg if defined($self);
+}
+
+sub DESTROY {
+    return unless $_[0]->isa('HASH');
+    my $self = tied(%{$_[0]});
+    return unless defined $self;
+    delete $ITERATORS{$self};
+    if (exists $OWNER{$self}) {
+        bindingsc::delete_nvmlEventData_t($self);
+        delete $OWNER{$self};
+    }
+}
+
+sub DISOWN {
+    my $self = shift;
+    my $ptr = tied(%$self);
+    delete $OWNER{$ptr};
+}
+
+sub ACQUIRE {
+    my $self = shift;
+    my $ptr = tied(%$self);
+    $OWNER{$ptr} = 1;
+}
+
+
 # ------- VARIABLE STUBS --------
 
 package nvidia::ml::bindings;
 
+*NVML_API_VERSION = *bindingsc::NVML_API_VERSION;
+*NVML_API_VERSION_STR = *bindingsc::NVML_API_VERSION_STR;
+*NVML_VALUE_NOT_AVAILABLE = *bindingsc::NVML_VALUE_NOT_AVAILABLE;
 *NVML_FEATURE_DISABLED = *bindingsc::NVML_FEATURE_DISABLED;
 *NVML_FEATURE_ENABLED = *bindingsc::NVML_FEATURE_ENABLED;
 *nvmlFlagDefault = *bindingsc::nvmlFlagDefault;
@@ -537,9 +697,17 @@ package nvidia::ml::bindings;
 *NVML_ERROR_NOT_FOUND = *bindingsc::NVML_ERROR_NOT_FOUND;
 *NVML_ERROR_INSUFFICIENT_SIZE = *bindingsc::NVML_ERROR_INSUFFICIENT_SIZE;
 *NVML_ERROR_INSUFFICIENT_POWER = *bindingsc::NVML_ERROR_INSUFFICIENT_POWER;
+*NVML_ERROR_DRIVER_NOT_LOADED = *bindingsc::NVML_ERROR_DRIVER_NOT_LOADED;
+*NVML_ERROR_TIMEOUT = *bindingsc::NVML_ERROR_TIMEOUT;
 *NVML_ERROR_UNKNOWN = *bindingsc::NVML_ERROR_UNKNOWN;
 *NVML_FAN_NORMAL = *bindingsc::NVML_FAN_NORMAL;
 *NVML_FAN_FAILED = *bindingsc::NVML_FAN_FAILED;
 *NVML_LED_COLOR_GREEN = *bindingsc::NVML_LED_COLOR_GREEN;
 *NVML_LED_COLOR_AMBER = *bindingsc::NVML_LED_COLOR_AMBER;
+*nvmlEventTypeSingleBitEccError = *bindingsc::nvmlEventTypeSingleBitEccError;
+*nvmlEventTypeDoubleBitEccError = *bindingsc::nvmlEventTypeDoubleBitEccError;
+*nvmlEventTypePState = *bindingsc::nvmlEventTypePState;
+*nvmlEventTypeXidCriticalError = *bindingsc::nvmlEventTypeXidCriticalError;
+*nvmlEventTypeNone = *bindingsc::nvmlEventTypeNone;
+*nvmlEventTypeAll = *bindingsc::nvmlEventTypeAll;
 1;

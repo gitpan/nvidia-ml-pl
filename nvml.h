@@ -36,10 +36,10 @@
 /*! 
 \mainpage NVML API Reference
 
-The NVIDIA Management Library (NVML) is a C-based programatic interface for monitoring and 
-managing various states within NVIDIA Tesla GPUs.<br>It is intended to be a platform for building
+The NVIDIA Management Library (NVML) is a C-based programmatic interface for monitoring and 
+managing various states within NVIDIA Tesla &tm; GPUs.<br>It is intended to be a platform for building
 3rd party applications, and is also the underlying library for the NVIDIA-supported nvidia-smi
-tool.<br>NVML is thread-safe.
+tool.<br>NVML is thread-safe so it is safe to make simultaneous NVML calls from multiple threads.
 <p>
 <hr size="1">
 <p>
@@ -47,30 +47,43 @@ tool.<br>NVML is thread-safe.
 <p>
 Supported OS platforms:
 - Windows: Windows Server 2008 R2 64bit, Windows 7 64bit
-- Linux: 32bit & 64bit
+- Linux: 32-bit and 64-bit
 
 Supported products:
 - Full Support
-    - Tesla Line:   S1070, S2050, C1060, C2050/70, M2050/70/90, X2070/90
-    - Quadro Line:  4000, 5000, 6000, 7000, M2070-Q
-    - Geforce Line: None
+    - NVIDIA Tesla &tm; Line:   S1070, S2050, C1060, C2050/70/75, M2050/70/75/90, X2070/90
+    - NVIDIA Quadro &reg; Line:  4000, 5000, 6000, 7000, M2070-Q
+    - NVIDIA GeForce &reg; Line: None
 - Limited Support
-    - Tesla Line:   None
-    - Quadro Line:  All other current and previous generation Quadro-branded parts
-    - Geforce Line: All current and previous generation Geforce-branded parts
+    - NVIDIA Tesla &tm; Line:   None
+    - NVIDIA Quadro &reg; Line:  All other current and previous generation Quadro-branded parts
+    - NVIDIA GeForce &reg; Line: All current and previous generation GeForce-branded parts
 
-Support Methods:
-- \ref group1 
+The NVML library can be found at \%ProgramW6432\%\\"NVIDIA Corporation"\\NVSMI\\ on Windows, but
+will not be added to the path. To dynamically link to NVML, add this path to the PATH environmental
+variable. To dynamically load NVML, call LoadLibrary with this path.
 
-Query Methods:
-- \ref group3 
-- \ref group2 
-- \ref group4 
+On Linux the NVML library will be found on the standard library path. For 64 bit Linux, both the 32 bit
+and 64 bit NVML libraries will be installed.
 
-Control Methods:
-- \ref group10 
-- \ref group5 
+The NVML API is divided into five categories:
+- Support Methods:
+    - \ref nvmlInitializationAndCleanup 
+- Query Methods:
+    - \ref nvmlSystemQueries 
+    - \ref nvmlDeviceQueries 
+    - \ref nvmlUnitQueries 
+- Control Methods:
+    - \ref nvmlUnitCommands 
+    - \ref nvmlDeviceCommands 
+- Event Handling Methods:
+    - \ref nvmlEvents
+- Error reporting Methods
+    - \ref nvmlErrorReporting
 
+List of changes can be found in the \ref Changelog
+
+\htmlonly
 <div width=100% align="center">
 <p>
 <hr size="1">
@@ -78,9 +91,11 @@ Control Methods:
 <h2>Device Feature Matrix</h2>
 <p>
 <div align="center">This chart shows which features are available for each GPU product.<br> 
-An updated version of the board's inforom may be required for some features.</div>
+An updated version of the board's infoROM may be required for some features.</div>
 <p>
+\endhtmlonly
 \htmlinclude device_features.html
+\htmlonly
 <p>
 <br>
 <hr size="1">
@@ -90,9 +105,18 @@ An updated version of the board's inforom may be required for some features.</di
 <div align="center">This chart shows which unit-level features are available for each S-class product.<br>
 All GPUs within each S-class product also provide the information listed in the Device chart above.</div>
 <p>
+\endhtmlonly
 \htmlinclude unit_features.html
+\htmlonly
 <p>
 </div>
+\endhtmlonly
+\latexonly
+\section{Feature Matrix}
+\endlatexonly
+\image latex FeatureMatrix_Units.png "This chart shows which unit-level features are available for each S-class product. All GPUs within each S-class product also provide the information listed in the Device chart below." width=10cm
+\image latex FeatureMatrix_Fermi.png "This chart shows which features are available for each Fermi GPU product." width=15cm
+\image latex FeatureMatrix_QuadroAndT10.png "This chart shows which features are available for each Quadro and T10 GPU product." height=22cm
 */
 
 #ifndef __nvml_nvml_h__
@@ -115,34 +139,55 @@ extern "C" {
     #define DECLDIR
 #endif
 
+/**
+ * NVML API versioning support
+ */
+#define NVML_API_VERSION            2
+#define NVML_API_VERSION_STR        "2"
+#define nvmlDeviceGetPciInfo        nvmlDeviceGetPciInfo_v2
+
 /***************************************************************************************************/
-/** @defgroup group6 Device Structs
+/** @defgroup nvmlDeviceStructs Device Structs
  *  @{
  */
 /***************************************************************************************************/
 
-/** 
- * Handle to a GPU device. 
- * @cond
+/**
+ * Special constant that some fields take when they are not available.
+ * Used when only part of the struct is not available.
+ *
+ * Each structure explicitly states when to check for this value.
  */
+#define NVML_VALUE_NOT_AVAILABLE (-1)
+
 typedef struct nvmlDevice_st* nvmlDevice_t;
-/** @endcond */
 
 /**
  * PCI information about a GPU device.
  */
-typedef struct nvmlPciInfo_st {
-    char busId[16];                  //!< The 3-tuple domain:bus:device PCI identifier (+ null terminator)
+typedef struct nvmlPciInfo_st 
+{
+    char busId[16];                  //!< The tuple domain:bus:device.function PCI identifier (&amp; NULL terminator)
     unsigned int domain;             //!< The PCI domain on which the device's bus resides, 0 to 255
     unsigned int bus;                //!< The bus on which the device resides, 0 to 255
     unsigned int device;             //!< The device's id on the bus, 0 to 31
     unsigned int pciDeviceId;        //!< The combined 16-bit device id and 16-bit vendor id
+    
+    // Added in NVML 2.285 API
+    unsigned int pciSubSystemId;     //!< The 32-bit Sub System Device ID
+    
+    // NVIDIA reserved for internal use only
+    unsigned int reserved0;
+    unsigned int reserved1;
+    unsigned int reserved2;
+    unsigned int reserved3;
 } nvmlPciInfo_t;
 
 /**
  * Detailed ECC error counts for a device.
  */
-typedef struct nvmlEccErrorCounts_st {
+typedef struct nvmlEccErrorCounts_st 
+{
     unsigned long long l1Cache;      //!< L1 cache errors
     unsigned long long l2Cache;      //!< L2 cache errors
     unsigned long long deviceMemory; //!< Device memory errors
@@ -150,30 +195,39 @@ typedef struct nvmlEccErrorCounts_st {
 } nvmlEccErrorCounts_t;
 
 /** 
- * Utilization info for a device.
- *
- * All readings are percents.
+ * Utilization information for a device.
  */
-typedef struct nvmlUtilization_st {
+typedef struct nvmlUtilization_st 
+{
     unsigned int gpu;                //!< Percent of time over the past second during which one or more kernels was executing on the GPU
     unsigned int memory;             //!< Percent of time over the past second during which global (device) memory was being read or written
 } nvmlUtilization_t;
 
 /** 
- * Memory allocation info for a device.
- *
- * All readings are in in bytes.
-*/
-typedef struct nvmlMemory_st {
-    unsigned long long total;        //!< Total installed FB memory
-    unsigned long long free;         //!< Unallocated FB memory
-    unsigned long long used;         //!< Allocated FB memory. Note that the driver/gpu always sets aside a small amount of memory  for bookkeeping
+ * Memory allocation information for a device.
+ */
+typedef struct nvmlMemory_st 
+{
+    unsigned long long total;        //!< Total installed FB memory (in bytes)
+    unsigned long long free;         //!< Unallocated FB memory (in bytes)
+    unsigned long long used;         //!< Allocated FB memory (in bytes). Note that the driver/GPU always sets aside a small amount of memory for bookkeeping
 } nvmlMemory_t;
+
+/**
+ * Information about running compute processes on the GPU
+ */
+typedef struct nvmlProcessInfo_st
+{
+    unsigned int pid;                 //!< Process ID
+    unsigned long long usedGpuMemory; //!< Amount of used GPU memory in bytes.
+                                      //!< Under WDDM, \ref NVML_VALUE_NOT_AVAILABLE is always reported
+                                      //!< because Windows KMD manages all the memory and not the NVIDIA driver
+} nvmlProcessInfo_t;
 
 /** @} */
 
 /***************************************************************************************************/
-/** @defgroup group7 Device Enums
+/** @defgroup nvmlDeviceEnumvs Device Enums
  *  @{
  */
 /***************************************************************************************************/
@@ -181,25 +235,22 @@ typedef struct nvmlMemory_st {
 /** 
  * Generic enable/disable enum. 
  */
-typedef enum nvmlEnableState_enum {
+typedef enum nvmlEnableState_enum 
+{
     NVML_FEATURE_DISABLED    = 0,     //!< Feature disabled 
     NVML_FEATURE_ENABLED     = 1      //!< Feature enabled
 } nvmlEnableState_t;
 
-
-/**
- * Generic flags used for changing default behavior of some functions.
- * See description particular of function for details.
- *
- * Flags can be combined with bitwise or operator |
- */
-#define nvmlFlagDefault     0x00      //!< Default behavior
-#define nvmlFlagForce       0x01      //!< Force some behavior
+//! Generic flag used to specify the default behavior of some functions. See description of particular functions for details.
+#define nvmlFlagDefault     0x00      
+//! Generic flag used to force some behavior. See description of particular functions for details.
+#define nvmlFlagForce       0x01      
 
 /** 
  * Temperature sensors. 
  */
-typedef enum nvmlTemperatureSensors_enum {
+typedef enum nvmlTemperatureSensors_enum 
+{
     NVML_TEMPERATURE_GPU      = 0     //!< Temperature sensor for the GPU die
 } nvmlTemperatureSensors_t;
 
@@ -210,7 +261,8 @@ typedef enum nvmlTemperatureSensors_enum {
  * Earlier CUDA versions supported a single exclusive mode, 
  * which is equivalent to NVML_COMPUTEMODE_EXCLUSIVE_THREAD in CUDA 4.0 and beyond.
  */
-typedef enum nvmlComputeMode_enum {
+typedef enum nvmlComputeMode_enum 
+{
     NVML_COMPUTEMODE_DEFAULT           = 0,  //!< Default compute mode -- multiple contexts per device
     NVML_COMPUTEMODE_EXCLUSIVE_THREAD  = 1,  //!< Compute-exclusive-thread mode -- only one context per device, usable from one thread at a time
     NVML_COMPUTEMODE_PROHIBITED        = 2,  //!< Compute-prohibited mode -- no contexts per device
@@ -220,16 +272,23 @@ typedef enum nvmlComputeMode_enum {
 /** 
  * ECC bit types. 
  */
-typedef enum nvmlEccBitType_enum {
+typedef enum nvmlEccBitType_enum 
+{
     NVML_SINGLE_BIT_ECC     = 0,      //!< Single bit ECC errors 
     NVML_DOUBLE_BIT_ECC     = 1       //!< Double bit ECC errors
 } nvmlEccBitType_t;
 
 /** 
  * ECC counter types. 
+ *
+ * Note: Volatile counts are reset each time the driver loads. On Windows this is once per boot. On Linux this can be more frequent.
+ *       On Linux the driver unloads when no active clients exist. If persistence mode is enabled or there is always a driver 
+ *       client active (e.g. X11), then Linux also sees per-boot behavior. If not, volatile counts are reset each time a compute app
+ *       is run.
  */
-typedef enum nvmlEccCounterType_enum {
-    NVML_VOLATILE_ECC      = 0,      //!< Volatile counts are reset after each boot
+typedef enum nvmlEccCounterType_enum 
+{
+    NVML_VOLATILE_ECC      = 0,      //!< Volatile counts are reset each time the driver loads.
     NVML_AGGREGATE_ECC     = 1       //!< Aggregate counts persist across reboots (i.e. for the lifetime of the device)
 } nvmlEccCounterType_t;
 
@@ -238,7 +297,8 @@ typedef enum nvmlEccCounterType_enum {
  * 
  * All speeds are in Mhz.
  */
-typedef enum nvmlClockType_enum {
+typedef enum nvmlClockType_enum 
+{
     NVML_CLOCK_GRAPHICS  = 0,        //!< Graphics clock domain
     NVML_CLOCK_SM        = 1,        //!< SM clock domain
     NVML_CLOCK_MEM       = 2         //!< Memory clock domain
@@ -247,80 +307,91 @@ typedef enum nvmlClockType_enum {
 /** 
  * Driver models. 
  *
- * windows only.
+ * Windows only.
  */
-typedef enum nvmlDriverModel_enum {
+typedef enum nvmlDriverModel_enum 
+{
     NVML_DRIVER_WDDM      = 0,       //!< WDDM driver model -- GPU treated as a display device
-    NVML_DRIVER_WDM       = 1        //!< WDM (TCC) model -- GPU treated as a generic device
+    NVML_DRIVER_WDM       = 1        //!< WDM (TCC) model (recommended) -- GPU treated as a generic device
 } nvmlDriverModel_t;
 
 /**
  * Allowed PStates.
  */
-typedef enum nvmlPStates_enum {
-    NVML_PSTATE_0               = 0,       //!< Power state 0 -- Maximum Performance
-    NVML_PSTATE_1               = 1,       //!< Power state 1 
-    NVML_PSTATE_2               = 2,       //!< Power state 2
-    NVML_PSTATE_3               = 3,       //!< Power state 3
-    NVML_PSTATE_4               = 4,       //!< Power state 4
-    NVML_PSTATE_5               = 5,       //!< Power state 5
-    NVML_PSTATE_6               = 6,       //!< Power state 6
-    NVML_PSTATE_7               = 7,       //!< Power state 7
-    NVML_PSTATE_8               = 8,       //!< Power state 8
-    NVML_PSTATE_9               = 9,       //!< Power state 9
-    NVML_PSTATE_10              = 10,      //!< Power state 10
-    NVML_PSTATE_11              = 11,      //!< Power state 11
-    NVML_PSTATE_12              = 12,      //!< Power state 12
-    NVML_PSTATE_13              = 13,      //!< Power state 13
-    NVML_PSTATE_14              = 14,      //!< Power state 14
-    NVML_PSTATE_15              = 15,      //!< Power state 15 -- Minimum Power
-    NVML_PSTATE_UNKNOWN         = 32,      //!< Unknown power state
+typedef enum nvmlPStates_enum 
+{
+    NVML_PSTATE_0               = 0,       //!< Performance state 0 -- Maximum Performance
+    NVML_PSTATE_1               = 1,       //!< Performance state 1 
+    NVML_PSTATE_2               = 2,       //!< Performance state 2
+    NVML_PSTATE_3               = 3,       //!< Performance state 3
+    NVML_PSTATE_4               = 4,       //!< Performance state 4
+    NVML_PSTATE_5               = 5,       //!< Performance state 5
+    NVML_PSTATE_6               = 6,       //!< Performance state 6
+    NVML_PSTATE_7               = 7,       //!< Performance state 7
+    NVML_PSTATE_8               = 8,       //!< Performance state 8
+    NVML_PSTATE_9               = 9,       //!< Performance state 9
+    NVML_PSTATE_10              = 10,      //!< Performance state 10
+    NVML_PSTATE_11              = 11,      //!< Performance state 11
+    NVML_PSTATE_12              = 12,      //!< Performance state 12
+    NVML_PSTATE_13              = 13,      //!< Performance state 13
+    NVML_PSTATE_14              = 14,      //!< Performance state 14
+    NVML_PSTATE_15              = 15,      //!< Performance state 15 -- Minimum Performance 
+    NVML_PSTATE_UNKNOWN         = 32,      //!< Unknown performance state
 } nvmlPstates_t;
 
 /** 
- * Available inforom objects.
+ * Available infoROM objects.
  */
-typedef enum nvmlInforomObject_enum {
-    NVML_INFOROM_OEM            = 0,       //!< The OEM object
-    NVML_INFOROM_ECC            = 1,       //!< The ECC object
+typedef enum nvmlInforomObject_enum 
+{
+    NVML_INFOROM_OEM            = 0,       //!< An object defined by OEM
+    NVML_INFOROM_ECC            = 1,       //!< The ECC object determining the level of ECC support
     NVML_INFOROM_POWER          = 2        //!< The power management object
 } nvmlInforomObject_t;
 
 /** 
- * Return values for nvml api calls. 
+ * Return values for NVML API calls. 
  */
-typedef enum nvmlReturn_enum {
+typedef enum nvmlReturn_enum 
+{
     NVML_SUCCESS = 0,                   //!< The operation was successful
     NVML_ERROR_UNINITIALIZED = 1,       //!< NVML was not first initialized with nvmlInit()
     NVML_ERROR_INVALID_ARGUMENT = 2,    //!< A supplied argument is invalid
     NVML_ERROR_NOT_SUPPORTED = 3,       //!< The requested operation is not available on target device
-    NVML_ERROR_NO_PERMISSION = 4,       //!< The currrent user does not have permission for operation
-    NVML_ERROR_ALREADY_INITIALIZED = 5, //!< NVML has already been initialized
-    NVML_ERROR_NOT_FOUND = 6,           //!< A query to find an object was unccessful
+    NVML_ERROR_NO_PERMISSION = 4,       //!< The current user does not have permission for operation
+    NVML_ERROR_ALREADY_INITIALIZED = 5, //!< Deprecated: Multiple initializations are now allowed through ref counting
+    NVML_ERROR_NOT_FOUND = 6,           //!< A query to find an object was unsuccessful
     NVML_ERROR_INSUFFICIENT_SIZE = 7,   //!< An input argument is not large enough
     NVML_ERROR_INSUFFICIENT_POWER = 8,  //!< A device's external power cables are not properly attached
+    NVML_ERROR_DRIVER_NOT_LOADED = 9,   //!< NVIDIA driver is not loaded
+    NVML_ERROR_TIMEOUT = 10,            //!< User provided timeout passed
     NVML_ERROR_UNKNOWN = 999            //!< An internal driver error occurred
 } nvmlReturn_t;
 
 /** @} */
 
 /***************************************************************************************************/
-/** @defgroup group8 Unit Structs
+/** @defgroup nvmlUnitStructs Unit Structs
  *  @{
  */
 /***************************************************************************************************/
 
-/** 
- * Handle to a GPU unit. 
- * @cond
- */
 typedef struct nvmlUnit_st* nvmlUnit_t;
-/** @endcond */
+
+/** 
+ * Description of HWBC entry 
+ */
+typedef struct nvmlHwbcEntry_st 
+{
+    unsigned int hwbcId;
+    char firmwareVersion[32];
+} nvmlHwbcEntry_t;
 
 /** 
  * Fan state enum. 
  */
-typedef enum nvmlFanState_enum {
+typedef enum nvmlFanState_enum 
+{
     NVML_FAN_NORMAL       = 0,     //!< Fan is working properly
     NVML_FAN_FAILED       = 1      //!< Fan has failed
 } nvmlFanState_t;
@@ -328,7 +399,8 @@ typedef enum nvmlFanState_enum {
 /** 
  * Led color enum. 
  */
-typedef enum nvmlLedColor_enum {
+typedef enum nvmlLedColor_enum 
+{
     NVML_LED_COLOR_GREEN       = 0,     //!< GREEN, indicates good health
     NVML_LED_COLOR_AMBER       = 1      //!< AMBER, indicates problem
 } nvmlLedColor_t;
@@ -337,15 +409,17 @@ typedef enum nvmlLedColor_enum {
 /** 
  * LED states for an S-class unit.
  */
-typedef struct nvmlLedState_st {
+typedef struct nvmlLedState_st 
+{
     char cause[256];               //!< If amber, a text description of the cause
-    unsigned int color;            //!< GREEN or AMBER
+    nvmlLedColor_t color;          //!< GREEN or AMBER
 } nvmlLedState_t;
 
 /** 
  * Static S-class unit info.
  */
-typedef struct nvmlUnitInfo_st {
+typedef struct nvmlUnitInfo_st 
+{
     char name[96];                      //!< Product name
     char id[96];                        //!< Product identifier
     char serial[96];                    //!< Product serial number
@@ -353,22 +427,22 @@ typedef struct nvmlUnitInfo_st {
 } nvmlUnitInfo_t;
 
 /** 
- * Power usage info for an S-class unit.
- * 
+ * Power usage information for an S-class unit.
  * The power supply state is a human readable string that equals "Normal" or contains
- * a combination of "Abnormal" plus 1 or more of the following:
- *    
- *    High voltage
- *    Fan failure
- *    Heatsink temperature
- *    Current limit
- *    Voltage below UV alarm threshold
- *    Low-voltage
- *    SI2C remote off command
- *    MOD_DISABLE input
- *    Short pin transition 
+ * a combination of "Abnormal" plus one or more of the following:
+ *
+ *    - High voltage
+ *    - Fan failure
+ *    - Heatsink temperature
+ *    - Current limit
+ *    - Voltage below UV alarm threshold
+ *    - Low-voltage
+ *    - SI2C remote off command
+ *    - MOD_DISABLE input
+ *    - Short pin transition 
 */
-typedef struct nvmlPSUInfo_st {
+typedef struct nvmlPSUInfo_st 
+{
     char state[256];                 //!< The power supply state
     unsigned int current;            //!< PSU current (A)
     unsigned int voltage;            //!< PSU voltage (V)
@@ -378,7 +452,8 @@ typedef struct nvmlPSUInfo_st {
 /** 
  * Fan speed reading for a single fan in an S-class unit.
  */
-typedef struct nvmlUnitFanInfo_st {
+typedef struct nvmlUnitFanInfo_st 
+{
     unsigned int speed;              //!< Fan speed (RPM)
     nvmlFanState_t state;            //!< Flag that indicates whether fan is working properly
 } nvmlUnitFanInfo_t;
@@ -386,7 +461,8 @@ typedef struct nvmlUnitFanInfo_st {
 /** 
  * Fan speed readings for an entire S-class unit.
  */
-typedef struct nvmlUnitFanSpeeds_st {
+typedef struct nvmlUnitFanSpeeds_st 
+{
     nvmlUnitFanInfo_t fans[24];      //!< Fan speed data for each fan
     unsigned int count;              //!< Number of fans in unit
 } nvmlUnitFanSpeeds_t;
@@ -394,9 +470,66 @@ typedef struct nvmlUnitFanSpeeds_st {
 /** @} */
 
 /***************************************************************************************************/
-/** @defgroup group1 Initilization and Cleanup
- * This page describes the methods that handle NVML initialization and cleanup.
- * It is the user's resonsibility to call \ref nvmlInit() before calling any other methods, and 
+/** @addtogroup nvmlEvents 
+ *  @{
+ */
+/***************************************************************************************************/
+
+/** 
+ * Handle to an event set
+ */
+typedef struct nvmlEventSet_st* nvmlEventSet_t;
+
+/** @defgroup nvmlEventType Event Types
+ * @{
+ * Event Types which user can be notified about.
+ * See description of particular functions for details.
+ *
+ * See \ref nvmlDeviceRegisterEvents and \ref nvmlDeviceGetSupportedEventTypes to check which devices 
+ * support each event.
+ *
+ * Types can be combined with bitwise or operator '|' when passed to \ref nvmlDeviceRegisterEvents
+ */
+//! Event about single bit ECC errors
+#define nvmlEventTypeSingleBitEccError     0x0000000000000001LL
+//! Event about double bit ECC errors
+#define nvmlEventTypeDoubleBitEccError     0x0000000000000002LL
+//! Event about PState changes
+/**
+ *  \note On Fermi architecture PState changes are also an indicator that GPU is throttling down due to
+ *  no work being executed on the GPU, power capping or thermal capping. In a typical situation,
+ *  Fermi-based GPU should stay in P0 for the duration of the execution of the compute process.
+ */
+#define nvmlEventTypePState                0x0000000000000004LL     
+//! Event that Xid critical error occurred
+#define nvmlEventTypeXidCriticalError      0x0000000000000008LL     
+//! Mask with no events
+#define nvmlEventTypeNone                  0x0000000000000000LL     
+//! Mask of all events
+#define nvmlEventTypeAll (nvmlEventTypeNone    \
+        | nvmlEventTypeSingleBitEccError       \
+        | nvmlEventTypeDoubleBitEccError       \
+        | nvmlEventTypePState                  \
+        | nvmlEventTypeXidCriticalError        \
+        )
+/** @} */
+
+/** 
+ * Information about occurred event
+ */
+typedef struct nvmlEventData_st
+{
+    nvmlDevice_t        device;         //!< Specific device where the event occurred
+    unsigned long long  eventType;      //!< Information about what specific event occurred
+    unsigned long long  reserved;
+} nvmlEventData_t;
+
+/** @} */
+
+/***************************************************************************************************/
+/** @defgroup nvmlInitializationAndCleanup Initialization and Cleanup
+ * This chapter describes the methods that handle NVML initialization and cleanup.
+ * It is the user's responsibility to call \ref nvmlInit() before calling any other methods, and 
  * nvmlShutdown() once NVML is no longer being used.
  *  @{
  */
@@ -408,11 +541,13 @@ typedef struct nvmlUnitFanSpeeds_st {
  * For all products.
  *
  * This method should be called once before invoking any other methods in the library.
+ * A reference count of the number of initializations is maintained.  Shutdown only occurs
+ * when the reference count reaches zero.
  * 
  * @return 
  *         - \ref NVML_SUCCESS                   if NVML has been properly initialized
- *         - \ref NVML_ERROR_ALREADY_INITIALIZED if NVML has already been initialized
  *         - \ref NVML_ERROR_NO_PERMISSION       if the user doesn't have permission to talk to any device
+ *         - \ref NVML_ERROR_DRIVER_NOT_LOADED   if NVIDIA driver is not running
  *         - \ref NVML_ERROR_INSUFFICIENT_POWER  if any devices have improperly attached external power cables
  *         - \ref NVML_ERROR_UNKNOWN             on any unexpected error
  */
@@ -423,7 +558,10 @@ nvmlReturn_t DECLDIR nvmlInit();
  * 
  * For all products.
  *
- * This method should be called after NVML work is done.
+ * This method should be called after NVML work is done, once for each call to \ref nvmlInit()
+ * A reference count of the number of initializations is maintained.  Shutdown only occurs
+ * when the reference count reaches zero.  For backwards compatibility, no error is reported if
+ * nvmlShutdown() is called more times than nvmlInit().
  * 
  * @return 
  *         - \ref NVML_SUCCESS                 if NVML has been properly shut down
@@ -435,20 +573,40 @@ nvmlReturn_t DECLDIR nvmlShutdown();
 /** @} */
 
 /***************************************************************************************************/
-/** @defgroup group3 System Queries
- * This page describes that queries that NVML can perform against the local system.
- *
- * These queries are not device-specific.
+/** @defgroup nvmlErrorReporting Error reporting
+ * This chapter describes helper functions for error reporting routines.
  *  @{
  */
 /***************************************************************************************************/
 
 /**
- * Retrieve the version of the system's graphics driver.
+ * Helper method for converting NVML error codes into readable strings.
+ *
+ * For all products
+ *
+ * @param result                               NVML error code to convert
+ *
+ * @return String representation of the error.
+ *
+ */
+const DECLDIR char* nvmlErrorString(nvmlReturn_t result);
+/** @} */
+
+/***************************************************************************************************/
+/** @defgroup nvmlSystemQueries System Queries
+ * This chapter describes the queries that NVML can perform against the local system. These queries
+ * are not device-specific.
+ *  @{
+ */
+/***************************************************************************************************/
+
+/**
+ * Retrieves the version of the system's graphics driver.
  * 
  * For all products.
  *
- * The version identifier is an alphanumberic string which includes the null terminator.
+ * The version identifier is an alphanumeric string.  It will not exceed 80 characters in length
+ * (including the NULL terminator).
  *
  * @param version                              Reference in which to return the version identifier
  * @param length                               The maximum allowed length of the string returned in \a version
@@ -456,15 +614,56 @@ nvmlReturn_t DECLDIR nvmlShutdown();
  * @return 
  *         - \ref NVML_SUCCESS                 if \a version has been set
  *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
- *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a length is too small or \a version is null
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a version is NULL
+ *         - \ref NVML_ERROR_INSUFFICIENT_SIZE if \a length is too small 
  */
 nvmlReturn_t DECLDIR nvmlSystemGetDriverVersion(char* version, unsigned int length);
+
+/**
+ * Retrieves the version of the NVML library.
+ * 
+ * For all products.
+ *
+ * The version identifier is an alphanumeric string.  It will not exceed 80 characters in length
+ * (including the NULL terminator).
+ *
+ * @param version                              Reference in which to return the version identifier
+ * @param length                               The maximum allowed length of the string returned in \a version
+ *
+ * @return 
+ *         - \ref NVML_SUCCESS                 if \a version has been set
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a version is NULL
+ *         - \ref NVML_ERROR_INSUFFICIENT_SIZE if \a length is too small 
+ */
+nvmlReturn_t DECLDIR nvmlSystemGetNVMLVersion(char* version, unsigned int length);
+
+/**
+ * Gets name of the process with provided process id
+ *
+ * For all products.
+ *
+ * Returned process name is cropped to provided length.
+ * name string is encoded in ANSI.
+ *
+ * @param pid                                  The identifier of the process
+ * @param name                                 Reference in which to return the process name
+ * @param length                               The maximum allowed length of the string returned in \a name
+ * 
+ * @return 
+ *         - \ref NVML_SUCCESS                 if \a name has been set
+ *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a name is NULL
+ *         - \ref NVML_ERROR_NOT_FOUND         if process doesn't exists
+ *         - \ref NVML_ERROR_NO_PERMISSION     if the user doesn't have permission to perform this operation
+ *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
+ */
+nvmlReturn_t DECLDIR nvmlSystemGetProcessName(unsigned int pid, char *name, unsigned int length);
 
 /** @} */
 
 /***************************************************************************************************/
-/** @defgroup group2 Unit Queries
- * This page describes that queries that NVML can perform against each unit. For S-class systems only.
+/** @defgroup nvmlUnitQueries Unit Queries
+ * This chapter describes that queries that NVML can perform against each unit. For S-class systems only.
  * In each case the device is identified with an nvmlUnit_t handle. This handle is obtained by 
  * calling \ref nvmlUnitGetHandleByIndex().
  *  @{
@@ -472,7 +671,7 @@ nvmlReturn_t DECLDIR nvmlSystemGetDriverVersion(char* version, unsigned int leng
 /***************************************************************************************************/
 
  /**
- * Retrieve the number of units in the system.
+ * Retrieves the number of units in the system.
  *
  * For S-class products.
  *
@@ -481,7 +680,7 @@ nvmlReturn_t DECLDIR nvmlSystemGetDriverVersion(char* version, unsigned int leng
  * @return 
  *         - \ref NVML_SUCCESS                 if \a unitCount has been set
  *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
- *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a unitCount is null
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a unitCount is NULL
  *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
  */
 nvmlReturn_t DECLDIR nvmlUnitGetCount(unsigned int *unitCount);
@@ -494,7 +693,7 @@ nvmlReturn_t DECLDIR nvmlUnitGetCount(unsigned int *unitCount);
  * Valid indices are derived from the \a unitCount returned by \ref nvmlUnitGetCount(). 
  *   For example, if \a unitCount is 2 the valid indices are 0 and 1, corresponding to UNIT 0 and UNIT 1.
  *
- * The order in which NVML enumerates units has no guarentees of consistency between reboots.
+ * The order in which NVML enumerates units has no guarantees of consistency between reboots.
  *
  * @param index                                The index of the target unit, >= 0 and < \a unitCount
  * @param unit                                 Reference in which to return the unit handle
@@ -502,42 +701,42 @@ nvmlReturn_t DECLDIR nvmlUnitGetCount(unsigned int *unitCount);
  * @return 
  *         - \ref NVML_SUCCESS                 if \a unit has been set
  *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
- *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a index is invalid or \a unit is null
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a index is invalid or \a unit is NULL
  *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
  */
 nvmlReturn_t DECLDIR nvmlUnitGetHandleByIndex(unsigned int index, nvmlUnit_t *unit);
 
 /**
- * Retrieve the static information associated with a unit.
+ * Retrieves the static information associated with a unit.
  *
  * For S-class products.
  *
  * See \ref nvmlUnitInfo_t for details on available unit info.
  *
- * @param unit                                 The identifer of the target unit
+ * @param unit                                 The identifier of the target unit
  * @param info                                 Reference in which to return the unit information
  * 
  * @return 
  *         - \ref NVML_SUCCESS                 if \a info has been populated
  *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
- *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a unit is invalid or \a info is null
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a unit is invalid or \a info is NULL
  */
 nvmlReturn_t DECLDIR nvmlUnitGetUnitInfo(nvmlUnit_t unit, nvmlUnitInfo_t *info);
 
 /**
- * Retrieve the LED state associated with this unit.
+ * Retrieves the LED state associated with this unit.
  *
  * For S-class products.
  *
  * See \ref nvmlLedState_t for details on allowed states.
  *
- * @param unit                                 The identifer of the target unit
+ * @param unit                                 The identifier of the target unit
  * @param state                                Reference in which to return the current LED state
  * 
  * @return 
  *         - \ref NVML_SUCCESS                 if \a state has been set
  *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
- *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a unit is invalid or \a state is null
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a unit is invalid or \a state is NULL
  *         - \ref NVML_ERROR_NOT_SUPPORTED     if this is not an S-class product
  *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
  * 
@@ -546,73 +745,73 @@ nvmlReturn_t DECLDIR nvmlUnitGetUnitInfo(nvmlUnit_t unit, nvmlUnitInfo_t *info);
 nvmlReturn_t DECLDIR nvmlUnitGetLedState(nvmlUnit_t unit, nvmlLedState_t *state);
 
 /**
- * Retrieve the PSU stats for the unit.
+ * Retrieves the PSU stats for the unit.
  *
  * For S-class products.
  *
  * See \ref nvmlPSUInfo_t for details on available PSU info.
  *
- * @param unit                                 The identifer of the target unit
+ * @param unit                                 The identifier of the target unit
  * @param psu                                  Reference in which to return the PSU information
  * 
  * @return 
  *         - \ref NVML_SUCCESS                 if \a psu has been populated
  *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
- *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a unit is invalid or \a psu is null
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a unit is invalid or \a psu is NULL
  *         - \ref NVML_ERROR_NOT_SUPPORTED     if this is not an S-class product
  *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
  */
 nvmlReturn_t DECLDIR nvmlUnitGetPsuInfo(nvmlUnit_t unit, nvmlPSUInfo_t *psu);
 
 /**
- * Retrieve the temperature readings for the unit, in degrees C.
+ * Retrieves the temperature readings for the unit, in degrees C.
  *
  * For S-class products.
  *
  * Depending on the product, readings may be available for intake (type=0), 
  * exhaust (type=1) and board (type=2).
  *
- * @param unit                                 The identifer of the target unit
+ * @param unit                                 The identifier of the target unit
  * @param type                                 The type of reading to take
  * @param temp                                 Reference in which to return the intake temperature
  * 
  * @return 
  *         - \ref NVML_SUCCESS                 if \a temp has been populated
  *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
- *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a unit or \a type is invalid or \a temp is null
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a unit or \a type is invalid or \a temp is NULL
  *         - \ref NVML_ERROR_NOT_SUPPORTED     if this is not an S-class product
  *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
  */
 nvmlReturn_t DECLDIR nvmlUnitGetTemperature(nvmlUnit_t unit, unsigned int type, unsigned int *temp);
 
 /**
- * Retrieve the fan speed readings for the unit.
+ * Retrieves the fan speed readings for the unit.
  *
  * For S-class products.
  *
  * See \ref nvmlUnitFanSpeeds_t for details on available fan speed info.
  *
- * @param unit                                 The identifer of the target unit
+ * @param unit                                 The identifier of the target unit
  * @param fanSpeeds                            Reference in which to return the fan speed information
  * 
  * @return 
  *         - \ref NVML_SUCCESS                 if \a fanSpeeds has been populated
  *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
- *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a unit is invalid or \a fanSpeeds is null
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a unit is invalid or \a fanSpeeds is NULL
  *         - \ref NVML_ERROR_NOT_SUPPORTED     if this is not an S-class product
  *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
  */
 nvmlReturn_t DECLDIR nvmlUnitGetFanSpeedInfo(nvmlUnit_t unit, nvmlUnitFanSpeeds_t *fanSpeeds);
 
 /**
- * Retrieve the set of GPU devices that are attached to the specified unit.
+ * Retrieves the set of GPU devices that are attached to the specified unit.
  *
  * For S-class products.
  *
  * The \a deviceCount argument is expected to be set to the size of the input \a devices array.
  *
- * @param unit                                 The identifer of the target unit
- * @param deviceCount                          Reference in which to provide the \a devies array size, and
+ * @param unit                                 The identifier of the target unit
+ * @param deviceCount                          Reference in which to provide the \a devices array size, and
  *                                             to return the number of attached GPU devices
  * @param devices                              Reference in which to return the references to the attached GPU devices
  * 
@@ -620,15 +819,33 @@ nvmlReturn_t DECLDIR nvmlUnitGetFanSpeedInfo(nvmlUnit_t unit, nvmlUnitFanSpeeds_
  *         - \ref NVML_SUCCESS                 if \a deviceCount and \a devices have been populated
  *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
  *         - \ref NVML_ERROR_INSUFFICIENT_SIZE if \a deviceCount indicates that the \a devices array is too small
- *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a unit is invalid, either of \a deviceCount or \a devices is null
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a unit is invalid, either of \a deviceCount or \a devices is NULL
  */
 nvmlReturn_t DECLDIR nvmlUnitGetDevices(nvmlUnit_t unit, unsigned int *deviceCount, nvmlDevice_t *devices);
 
+/**
+ * Retrieves the IDs and firmware versions for any Host Interface Cards (HICs) in the system.
+ * 
+ * For S-class products.
+ *
+ * The \a hwbcCount argument is expected to be set to the size of the input \a hwbcEntries array.
+ * The HIC must be connected to an S-class system for it to be reported by this function.
+ *
+ * @param hwbcCount                            Size of hwbcEntries array
+ * @param hwbcEntries                          Array holding information about hwbc
+ *
+ * @return 
+ *         - \ref NVML_SUCCESS                 if \a hwbcCount and \a hwbcEntries have been populated
+ *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if either \a hwbcCount or \a hwbcEntries is NULL
+ *         - \ref NVML_ERROR_INSUFFICIENT_SIZE if \a hwbcCount indicates that the \a hwbcEntries array is too small
+ */
+nvmlReturn_t DECLDIR nvmlSystemGetHicVersion(unsigned int *hwbcCount, nvmlHwbcEntry_t *hwbcEntries);
 /** @} */
 
 /***************************************************************************************************/
-/** @defgroup group4 Device Queries
- * This page describes that queries that NVML can perform against each device.
+/** @defgroup nvmlDeviceQueries Device Queries
+ * This chapter describes that queries that NVML can perform against each device.
  * In each case the device is identified with an nvmlDevice_t handle. This handle is obtained by  
  * calling one of \ref nvmlDeviceGetHandleByIndex(), \ref nvmlDeviceGetHandleBySerial() or 
  * \ref nvmlDeviceGetHandleByPciBusId(). 
@@ -637,7 +854,7 @@ nvmlReturn_t DECLDIR nvmlUnitGetDevices(nvmlUnit_t unit, unsigned int *deviceCou
 /***************************************************************************************************/
 
  /**
- * Retrieve the number of compute devices in the system. A compute device is a single GPU.
+ * Retrieves the number of compute devices in the system. A compute device is a single GPU.
  * 
  * For all products.
  *
@@ -649,7 +866,7 @@ nvmlReturn_t DECLDIR nvmlUnitGetDevices(nvmlUnit_t unit, unsigned int *deviceCou
  * @return 
  *         - \ref NVML_SUCCESS                 if \a deviceCount has been set
  *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
- *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a deviceCount is null
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a deviceCount is NULL
  *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
  */
 nvmlReturn_t DECLDIR nvmlDeviceGetCount(unsigned int *deviceCount);
@@ -663,17 +880,17 @@ nvmlReturn_t DECLDIR nvmlDeviceGetCount(unsigned int *deviceCount);
  *   \ref nvmlDeviceGetCount(). For example, if \a accessibleDevices is 2 the valid indices  
  *   are 0 and 1, corresponding to GPU 0 and GPU 1.
  *
- * The order in which NVML enumerates devices has no guarentees of consistency between reboots. For that reason it
+ * The order in which NVML enumerates devices has no guarantees of consistency between reboots. For that reason it
  *   is recommended that devices be looked up by their PCI ids or board serial numbers. See 
  *   \ref nvmlDeviceGetHandleBySerial() and \ref nvmlDeviceGetHandleByPciBusId().
  *
- * @param index                                The index of the target gpu, >= 0 and < \a accessibleDevices
+ * @param index                                The index of the target GPU, >= 0 and < \a accessibleDevices
  * @param device                               Reference in which to return the device handle
  * 
  * @return 
  *         - \ref NVML_SUCCESS                 if \a device has been set
  *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
- *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a index is invalid or \a device is null
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a index is invalid or \a device is NULL
  *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
  */
 nvmlReturn_t DECLDIR nvmlDeviceGetHandleByIndex(unsigned int index, nvmlDevice_t *device);
@@ -681,20 +898,19 @@ nvmlReturn_t DECLDIR nvmlDeviceGetHandleByIndex(unsigned int index, nvmlDevice_t
 /**
  * Acquire the handle for a particular device, based on its board serial number.
  *
- * For Tesla and Quadro products from the Fermi family.
+ * For Tesla &tm; and Quadro &reg; products from the Fermi family.
  *
  * This number corresponds to the value printed directly on the board, and to the value returned by
  *   \ref nvmlDeviceGetSerial().
  *
- * @param serial                               The board serial number of the target gpu
+ * @param serial                               The board serial number of the target GPU
  * @param device                               Reference in which to return the device handle
  * 
  * @return 
  *         - \ref NVML_SUCCESS                 if \a device has been set
  *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
- *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a serial is invalid or \a device is null
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a serial is invalid or \a device is NULL
  *         - \ref NVML_ERROR_NOT_FOUND         if \a serial does not match a valid device on the system
- *         - \ref NVML_ERROR_NOT_SUPPORTED     if the device does not support this feature
  *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
  */
 nvmlReturn_t DECLDIR nvmlDeviceGetHandleBySerial(char *serial, nvmlDevice_t *device);
@@ -704,126 +920,132 @@ nvmlReturn_t DECLDIR nvmlDeviceGetHandleBySerial(char *serial, nvmlDevice_t *dev
  * 
  * For all products.
  *
- * This number corresponds to the value \ref nvmlPciInfo_t -> busId returned by \ref nvmlDeviceGetPciInfo().
+ * This value corresponds to the nvmlPciInfo_t::busId returned by \ref nvmlDeviceGetPciInfo().
  *
- * @param pciBusId                             The PCI bus id of the target gpu
+ * @param pciBusId                             The PCI bus id of the target GPU
  * @param device                               Reference in which to return the device handle
  * 
  * @return 
  *         - \ref NVML_SUCCESS                 if \a device has been set
  *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
- *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a pciBusId is invalid or \a device is null
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a pciBusId is invalid or \a device is NULL
  *         - \ref NVML_ERROR_NOT_FOUND         if \a pciBusId does not match a valid device on the system
  *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
  */
 nvmlReturn_t DECLDIR nvmlDeviceGetHandleByPciBusId(char *pciBusId, nvmlDevice_t *device);
 
 /**
- * Retrieve the name of this device. 
+ * Retrieves the name of this device. 
  * 
  * For all products.
  *
- * The name is an alphanumeric string that denotes a particular product, e.g. Tesla C2070. It will not
- * exceed 64 characters in length (including the null terminator).
+ * The name is an alphanumeric string that denotes a particular product, e.g. Tesla &tm; C2070. It will not
+ * exceed 64 characters in length (including the NULL terminator).
  *
- * @param device                               The identifer of the target device
+ * @param device                               The identifier of the target device
  * @param name                                 Reference in which to return the product name
  * @param length                               The maximum allowed length of the string returned in \a name
  * 
  * @return 
  *         - \ref NVML_SUCCESS                 if \a name has been set
  *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
- *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device is invalid, \a length is too small or \a name is null
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device is invalid, or \a name is NULL
+ *         - \ref NVML_ERROR_INSUFFICIENT_SIZE if \a length is too small
  */
 nvmlReturn_t DECLDIR nvmlDeviceGetName(nvmlDevice_t device, char* name, unsigned int length);
 
 /**
- * Retrieve the globally unique serial number associated with this device.
+ * Retrieves the globally unique serial number associated with this device.
  *
- * For Tesla and Quadro products from the Fermi family.
+ * For Tesla &tm; and Quadro &reg; products from the Fermi family.
  *
- * The serial number is an alphanumeric string that will not exceed 30 characters (including the null terminator).
+ * The serial number is an alphanumeric string that will not exceed 30 characters (including the NULL terminator).
  * This number matches the serial number tag that is physically attached to the board.
  *
- * @param device                               The identifer of the target device
+ * @param device                               The identifier of the target device
  * @param serial                               Reference in which to return the board/module serial number
  * @param length                               The maximum allowed length of the string returned in \a serial
  * 
  * @return 
  *         - \ref NVML_SUCCESS                 if \a serial has been set
  *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
- *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device is invalid, \a length is too small or \a serial is null
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device is invalid, or \a serial is NULL
+ *         - \ref NVML_ERROR_INSUFFICIENT_SIZE if \a length is too small
  *         - \ref NVML_ERROR_NOT_SUPPORTED     if the device does not support this feature
  */
 nvmlReturn_t DECLDIR nvmlDeviceGetSerial(nvmlDevice_t device, char* serial, unsigned int length);
 
 /**
- * Retrieve the UUID associated with this device, as a 5 part hexidecimal string.
+ * Retrieves the UUID associated with this device, as a 5 part hexadecimal string.
  *
- * For Tesla products, and Quadro products from the Fermi family.
+ * For Tesla &tm; products, and Quadro &reg; products from the Fermi family.
  *
  * The UUID is a globally unique identifier. It is the only available identifier for pre-Fermi-architecture products.
- * It does NOT correspond to any identifier printed on the board.
+ * It does NOT correspond to any identifier printed on the board.  It will not exceed 80 characters in length
+ * (including the NULL terminator).
  *
- * @param device                               The identifer of the target device
+ * @param device                               The identifier of the target device
  * @param uuid                                 Reference in which to return the GPU UUID
  * @param length                               The maximum allowed length of the string returned in \a uuid
  * 
  * @return 
  *         - \ref NVML_SUCCESS                 if \a uuid has been set
  *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
- *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device is invalid, \a uuid is null or \a length is too small
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device is invalid, or \a uuid is NULL
+ *         - \ref NVML_ERROR_INSUFFICIENT_SIZE if \a length is too small 
  *         - \ref NVML_ERROR_NOT_SUPPORTED     if the device does not support this feature
+ *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
  */
 nvmlReturn_t DECLDIR nvmlDeviceGetUUID(nvmlDevice_t device, char *uuid, unsigned int length);
 
 /**
- * Retrieve the version info for the device's inforom.
+ * Retrieves the version information for the device's infoROM.
  *
- * For Tesla and Quadro products from the Fermi family.
+ * For Tesla &tm; and Quadro &reg; products from the Fermi family.
  *
  * Fermi and higher parts have non-volatile on-board memory for persisting device info, such as aggregate 
- * ECC counts. The version of the data structures in this memory may change from time to time. This method 
- * retrieves this version info. 
+ * ECC counts. The version of the data structures in this memory may change from time to time. It will not
+ * exceed 16 characters in length (including the NULL terminator). 
  *
- * See \ref nvmlInforomObject_t for details on the available inforom objects.
+ * See \ref nvmlInforomObject_t for details on the available infoROM objects.
  *
- * @param device                               The identifer of the target device
- * @param object                               The target inforom object
- * @param version                              Reference in which to return the inforom version
+ * @param device                               The identifier of the target device
+ * @param object                               The target infoROM object
+ * @param version                              Reference in which to return the infoROM version
  * @param length                               The maximum allowed length of the string returned in \a version
  *
  * @return 
  *         - \ref NVML_SUCCESS                 if \a version has been set
  *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
- *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a version is null or \a length is too small
- *         - \ref NVML_ERROR_NOT_SUPPORTED     if the device does not have an inforom
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a version is NULL
+ *         - \ref NVML_ERROR_INSUFFICIENT_SIZE if \a length is too small 
+ *         - \ref NVML_ERROR_NOT_SUPPORTED     if the device does not have an infoROM
  *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
  */
 nvmlReturn_t DECLDIR nvmlDeviceGetInforomVersion(nvmlDevice_t device, nvmlInforomObject_t object, char *version, unsigned int length);
 
 /**
- * Retrieve the display mode for the this device.
+ * Retrieves the display mode for the device.
  *
- * For Tesla products, and Quadro products from the Fermi family.
+ * For Tesla &tm; products, and Quadro &reg; products from the Fermi family.
  *
  * This method indicates whether a physical display is currently connected to the device.
  *
  * See \ref nvmlEnableState_t for details on allowed modes.
  *
- * @param device                               The identifer of the target device
+ * @param device                               The identifier of the target device
  * @param display                              Reference in which to return the display mode
  * 
  * @return 
  *         - \ref NVML_SUCCESS                 if \a display has been set
  *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
- *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device is invalid or \a display is null
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device is invalid or \a display is NULL
  *         - \ref NVML_ERROR_NOT_SUPPORTED     if the device does not support this feature
  */
 nvmlReturn_t DECLDIR nvmlDeviceGetDisplayMode(nvmlDevice_t device, nvmlEnableState_t *display);
 
 /**
- * Retrieve the persistence mode associated with this device.
+ * Retrieves the persistence mode associated with this device.
  *
  * For all CUDA-capable products.
  * For Linux only.
@@ -833,13 +1055,13 @@ nvmlReturn_t DECLDIR nvmlDeviceGetDisplayMode(nvmlDevice_t device, nvmlEnableSta
  *
  * See \ref nvmlEnableState_t for details on allowed modes.
  *
- * @param device                               The identifer of the target device
+ * @param device                               The identifier of the target device
  * @param mode                                 Reference in which to return the current driver persistence mode
  * 
  * @return 
  *         - \ref NVML_SUCCESS                 if \a mode has been set
  *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
- *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device is invalid or \a mode is null
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device is invalid or \a mode is NULL
  *         - \ref NVML_ERROR_NOT_SUPPORTED     if the device does not support this feature
  *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
  *
@@ -848,104 +1070,146 @@ nvmlReturn_t DECLDIR nvmlDeviceGetDisplayMode(nvmlDevice_t device, nvmlEnableSta
 nvmlReturn_t DECLDIR nvmlDeviceGetPersistenceMode(nvmlDevice_t device, nvmlEnableState_t *mode);
 
 /**
- * Retrieve the PCI attributes of this device.
+ * Retrieves the PCI attributes of this device.
  * 
  * For all products.
  *
  * See \ref nvmlPciInfo_t for details on the available PCI info.
  *
- * @param device                               The identifer of the target device
- * @param pci                                  Reference in which to return the pci info
+ * @param device                               The identifier of the target device
+ * @param pci                                  Reference in which to return the PCI info
  * 
  * @return 
  *         - \ref NVML_SUCCESS                 if \a pci has been populated
  *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
- *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device is invalid or \a pci is null
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device is invalid or \a pci is NULL
+ *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
  */
 nvmlReturn_t DECLDIR nvmlDeviceGetPciInfo(nvmlDevice_t device, nvmlPciInfo_t *pci);
 
 /**
- * Retrieve the current clock speeds for the device.
+ * Retrieves the current clock speeds for the device.
  *
- * For Tesla products, and Quadro products from the Fermi family.
+ * For Tesla &tm; products, and Quadro &reg; products from the Fermi family.
  *
  * See \ref nvmlClockType_t for details on available clock information.
  *
- * @param device                               The identifer of the target device
+ * @param device                               The identifier of the target device
  * @param type                                 Identify which clock domain to query
  * @param clock                                Reference in which to return the clock speed in MHz
  * 
  * @return 
  *         - \ref NVML_SUCCESS                 if \a clock has been set
  *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
- *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device is invalid or \a clock is null
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device is invalid or \a clock is NULL
  *         - \ref NVML_ERROR_NOT_SUPPORTED     if the device cannot report the specified clock
  *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
  */
 nvmlReturn_t DECLDIR nvmlDeviceGetClockInfo(nvmlDevice_t device, nvmlClockType_t type, unsigned int *clock);
 
 /**
- * Retrieve the current operating speed of the device's fan.
+ * Retrieves the maximum clock speeds for the device.
+ *
+ * For Tesla &tm; products, and Quadro &reg; products from the Fermi family.
+ *
+ * See \ref nvmlClockType_t for details on available clock information.
+ *
+ * @param device                               The identifier of the target device
+ * @param type                                 Identify which clock domain to query
+ * @param clock                                Reference in which to return the clock speed in MHz
+ * 
+ * @return 
+ *         - \ref NVML_SUCCESS                 if \a clock has been set
+ *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device is invalid or \a clock is NULL
+ *         - \ref NVML_ERROR_NOT_SUPPORTED     if the device cannot report the specified clock
+ *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
+ */
+nvmlReturn_t DECLDIR nvmlDeviceGetMaxClockInfo(nvmlDevice_t device, nvmlClockType_t type, unsigned int *clock);
+
+/**
+ * Retrieves the current operating speed of the device's fan.
  * 
  * For all discrete products with dedicated fans.
  *
  * The fan speed is expressed as a percent of the maximum, i.e. full speed is 100%.
  *
- * @param device                               The identifer of the target device
+ * @param device                               The identifier of the target device
  * @param speed                                Reference in which to return the fan speed percentage
  * 
  * @return 
  *         - \ref NVML_SUCCESS                 if \a speed has been set
  *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
- *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device is invalid or \a speed is null
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device is invalid or \a speed is NULL
  *         - \ref NVML_ERROR_NOT_SUPPORTED     if the device does not have a fan
  *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
  */
 nvmlReturn_t DECLDIR nvmlDeviceGetFanSpeed(nvmlDevice_t device, unsigned int *speed);
 
 /**
- * Retrieve the current temperature readings for the device, in degrees C. 
+ * Retrieves the current temperature readings for the device, in degrees C. 
  * 
  * For all discrete and S-class products.
  *
  * See \ref nvmlTemperatureSensors_t for details on available temperature sensors.
  *
- * @param device                               The identifer of the target device
+ * @param device                               The identifier of the target device
  * @param sensorType                           Flag that indicates which sensor reading to retrieve
  * @param temp                                 Reference in which to return the temperature reading
  * 
  * @return 
  *         - \ref NVML_SUCCESS                 if \a temp has been set
  *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
- *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device is invalid or \a temp is null
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device is invalid, \a sensorType is invalid or \a temp is NULL
  *         - \ref NVML_ERROR_NOT_SUPPORTED     if the device does not have the specified sensor
  *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
  */
 nvmlReturn_t DECLDIR nvmlDeviceGetTemperature(nvmlDevice_t device, nvmlTemperatureSensors_t sensorType, unsigned int *temp);
 
 /**
+ * Retrieves the current performance state for the device. 
+ *
+ * For Tesla &tm; products, and Quadro &reg; products from the Fermi family.
+ *
+ * See \ref nvmlPstates_t for details on allowed performance states.
+ *
+ * @param device                               The identifier of the target device
+ * @param pState                               Reference in which to return the performance state reading
+ * 
+ * @return 
+ *         - \ref NVML_SUCCESS                 if \a pState has been set
+ *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device is invalid or \a pState is NULL
+ *         - \ref NVML_ERROR_NOT_SUPPORTED     if the device does not support this feature
+ *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
+ */
+nvmlReturn_t DECLDIR nvmlDeviceGetPerformanceState(nvmlDevice_t device, nvmlPstates_t *pState);
+
+/**
+ * Deprecated: Use \ref nvmlDeviceGetPerformanceState. This function exposes an incorrect generalization.
+ *
  * Retrieve the current power state for the device. 
  *
- * For Tesla products, and Quadro products from the Fermi family.
+ * For Tesla &tm; products, and Quadro &reg; products from the Fermi family.
  *
  * See \ref nvmlPstates_t for details on allowed power states.
  *
- * @param device                               The identifer of the target device
+ * @param device                               The identifier of the target device
  * @param pState                               Reference in which to return the power state reading
  * 
  * @return 
  *         - \ref NVML_SUCCESS                 if \a pState has been set
  *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
- *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device is invalid
- *         - \ref NVML_ERROR_NOT_SUPPORTED     if the device does not support power state readings
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device is invalid or \a pState is NULL
+ *         - \ref NVML_ERROR_NOT_SUPPORTED     if the device does not support this feature
  *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
  */
 nvmlReturn_t DECLDIR nvmlDeviceGetPowerState(nvmlDevice_t device, nvmlPstates_t *pState);
 
 /**
- * Retrieve the power management mode associated with this device.
+ * Retrieves the power management mode associated with this device.
  *
- * For "GF11x" Tesla and Quadro products from the Fermi family.
+ * For "GF11x" Tesla &tm; and Quadro &reg; products from the Fermi family.
  * Requires \a NVML_INFOROM_POWER version 3.0 or higher.
  *
  * This flag indicates whether any power management algorithm is currently active on the device. An 
@@ -954,22 +1218,22 @@ nvmlReturn_t DECLDIR nvmlDeviceGetPowerState(nvmlDevice_t device, nvmlPstates_t 
  *
  * See \ref nvmlEnableState_t for details on allowed modes.
  *
- * @param device                               The identifer of the target device
+ * @param device                               The identifier of the target device
  * @param mode                                 Reference in which to return the current power management mode
  * 
  * @return 
  *         - \ref NVML_SUCCESS                 if \a mode has been set
  *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
- *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device is invalid or \a mode is null
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device is invalid or \a mode is NULL
  *         - \ref NVML_ERROR_NOT_SUPPORTED     if the device does not support this feature
  *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
  */
 nvmlReturn_t DECLDIR nvmlDeviceGetPowerManagementMode(nvmlDevice_t device, nvmlEnableState_t *mode);
 
 /**
- * Retrieve the power management limit associated with this device, in milliwatts.
+ * Retrieves the power management limit associated with this device, in milliwatts.
  *
- * For "GF11x" Tesla and Quadro products from the Fermi family.
+ * For "GF11x" Tesla &tm; and Quadro &reg; products from the Fermi family.
  * Requires \a NVML_INFOROM_POWER version 3.0 or higher.
  *
  * The power limit defines the upper boundary for the card's power draw. If
@@ -978,42 +1242,42 @@ nvmlReturn_t DECLDIR nvmlDeviceGetPowerManagementMode(nvmlDevice_t device, nvmlE
  * This reading is only available if power management mode is supported. 
  * See \ref nvmlDeviceGetPowerManagementMode.
  *
- * @param device                               The identifer of the target device
+ * @param device                               The identifier of the target device
  * @param limit                                Reference in which to return the power management limit
  * 
  * @return 
  *         - \ref NVML_SUCCESS                 if \a limit has been set
  *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
- *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device is invalid or \a limit is null
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device is invalid or \a limit is NULL
  *         - \ref NVML_ERROR_NOT_SUPPORTED     if the device does not support this feature
  *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
  */
 nvmlReturn_t DECLDIR nvmlDeviceGetPowerManagementLimit(nvmlDevice_t device, unsigned int *limit);
 
 /**
- * Retrieve the power usage reading for the device, in milliwatts. This is the power draw for the entire 
+ * Retrieves the power usage reading for the device, in milliwatts. This is the power draw for the entire 
  * board, including GPU, memory, etc.
  *
- * For "GF11x" Tesla and Quadro products from the Fermi family.
+ * For "GF11x" Tesla &tm; and Quadro &reg; products from the Fermi family.
  * Requires \a NVML_INFOROM_POWER version 3.0 or higher.
  *
  * The reading is accurate to within a range of +/- 5 watts. It is only available if power management mode
  * is supported. See \ref nvmlDeviceGetPowerManagementMode.
  *
- * @param device                               The identifer of the target device
+ * @param device                               The identifier of the target device
  * @param power                                Reference in which to return the power usage information
  * 
  * @return 
  *         - \ref NVML_SUCCESS                 if \a power has been populated
  *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
- *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device is invalid or \a power is null
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device is invalid or \a power is NULL
  *         - \ref NVML_ERROR_NOT_SUPPORTED     if the device does not support power readings
  *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
  */
 nvmlReturn_t DECLDIR nvmlDeviceGetPowerUsage(nvmlDevice_t device, unsigned int *power);
 
 /**
- * Retrieve the amount of used, free and total memory available on the device, in bytes.
+ * Retrieves the amount of used, free and total memory available on the device, in bytes.
  * 
  * For all products.
  *
@@ -1025,31 +1289,31 @@ nvmlReturn_t DECLDIR nvmlDeviceGetPowerUsage(nvmlDevice_t device, unsigned int *
  *
  * See \ref nvmlMemory_t for details on available memory info.
  *
- * @param device                               The identifer of the target device
+ * @param device                               The identifier of the target device
  * @param memory                               Reference in which to return the memory information
  * 
  * @return 
  *         - \ref NVML_SUCCESS                 if \a memory has been populated
  *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
- *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device is invalid or \a memory is null
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device is invalid or \a memory is NULL
  *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
  */
 nvmlReturn_t DECLDIR nvmlDeviceGetMemoryInfo(nvmlDevice_t device, nvmlMemory_t *memory);
 
 /**
- * Retrieve the current compute mode for the device.
+ * Retrieves the current compute mode for the device.
  *
  * For all CUDA-capable products.
  *
  * See \ref nvmlComputeMode_t for details on allowed compute modes.
  *
- * @param device                               The identifer of the target device
+ * @param device                               The identifier of the target device
  * @param mode                                 Reference in which to return the current compute mode
  * 
  * @return 
  *         - \ref NVML_SUCCESS                 if \a mode has been set
  *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
- *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device is invalid or \a mode is null
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device is invalid or \a mode is NULL
  *         - \ref NVML_ERROR_NOT_SUPPORTED     if the device does not support this feature
  *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
  *
@@ -1058,9 +1322,9 @@ nvmlReturn_t DECLDIR nvmlDeviceGetMemoryInfo(nvmlDevice_t device, nvmlMemory_t *
 nvmlReturn_t DECLDIR nvmlDeviceGetComputeMode(nvmlDevice_t device, nvmlComputeMode_t *mode);
 
 /**
- * Retrieve the current and pending ECC modes for the device.
+ * Retrieves the current and pending ECC modes for the device.
  *
- * For Tesla and Quadro products from the Fermi family.
+ * For Tesla &tm; and Quadro &reg; products from the Fermi family.
  * Requires \a NVML_INFOROM_ECC version 1.0 or higher.
  *
  * Changing ECC modes requires a reboot. The "pending" ECC mode refers to the target mode following
@@ -1068,14 +1332,14 @@ nvmlReturn_t DECLDIR nvmlDeviceGetComputeMode(nvmlDevice_t device, nvmlComputeMo
  *
  * See \ref nvmlEnableState_t for details on allowed modes.
  *
- * @param device                               The identifer of the target device
+ * @param device                               The identifier of the target device
  * @param current                              Reference in which to return the current ECC mode
  * @param pending                              Reference in which to return the pending ECC mode
  * 
  * @return 
  *         - \ref NVML_SUCCESS                 if \a current and \a pending have been set
  *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
- *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device is invalid or either \a current or \a pending is null
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device is invalid or either \a current or \a pending is NULL
  *         - \ref NVML_ERROR_NOT_SUPPORTED     if the device does not support this feature
  *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
  *
@@ -1084,10 +1348,11 @@ nvmlReturn_t DECLDIR nvmlDeviceGetComputeMode(nvmlDevice_t device, nvmlComputeMo
 nvmlReturn_t DECLDIR nvmlDeviceGetEccMode(nvmlDevice_t device, nvmlEnableState_t *current, nvmlEnableState_t *pending);
 
 /**
- * Retrieve the total ECC error counts for the device.
+ * Retrieves the total ECC error counts for the device.
  *
- * For Tesla and Quadro products from the Fermi family.
+ * For Tesla &tm; and Quadro &reg; products from the Fermi family.
  * Requires \a NVML_INFOROM_ECC version 1.0 or higher.
+ * Requires ECC Mode to be enabled.
  *
  * The total error count is the sum of errors across each of the separate memory systems, i.e. the total set of 
  * errors across the entire device.
@@ -1095,7 +1360,7 @@ nvmlReturn_t DECLDIR nvmlDeviceGetEccMode(nvmlDevice_t device, nvmlEnableState_t
  * See \ref nvmlEccBitType_t for a description of available bit types.\n
  * See \ref nvmlEccCounterType_t for a description of available counter types.
  *
- * @param device                               The identifer of the target device
+ * @param device                               The identifier of the target device
  * @param bitType                              Flag that specifies the bit-type of the errors. 
  * @param counterType                          Flag that specifies the counter-type of the errors. 
  * @param eccCounts                            Reference in which to return the specified ECC errors
@@ -1103,7 +1368,7 @@ nvmlReturn_t DECLDIR nvmlDeviceGetEccMode(nvmlDevice_t device, nvmlEnableState_t
  * @return 
  *         - \ref NVML_SUCCESS                 if \a eccCounts has been set
  *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
- *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device, \a bitType or \a counterType is invalid, or \a eccCounts is null
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device, \a bitType or \a counterType is invalid, or \a eccCounts is NULL
  *         - \ref NVML_ERROR_NOT_SUPPORTED     if the device does not support this feature
  *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
  *
@@ -1112,11 +1377,12 @@ nvmlReturn_t DECLDIR nvmlDeviceGetEccMode(nvmlDevice_t device, nvmlEnableState_t
 nvmlReturn_t DECLDIR nvmlDeviceGetTotalEccErrors(nvmlDevice_t device, nvmlEccBitType_t bitType, nvmlEccCounterType_t counterType, unsigned long long *eccCounts);
 
 /**
- * Retrieve the detailed ECC error counts for the device.
+ * Retrieves the detailed ECC error counts for the device.
  *
- * For Tesla and Quadro products from the Fermi family.
+ * For Tesla &tm; and Quadro &reg; products from the Fermi family.
  * Requires \a NVML_INFOROM_ECC version 2.0 or higher to report aggregate location-based ECC counts.
  * Requires \a NVML_INFOROM_ECC version 1.0 or higher to report all other ECC counts.
+ * Requires ECC Mode to be enabled.
  *
  * Detailed errors provide separate ECC counts for specific parts of the memory system.
  *
@@ -1124,7 +1390,7 @@ nvmlReturn_t DECLDIR nvmlDeviceGetTotalEccErrors(nvmlDevice_t device, nvmlEccBit
  * See \ref nvmlEccCounterType_t for a description of available counter types.\n
  * See \ref nvmlEccErrorCounts_t for a description of provided detailed ECC counts.
  *
- * @param device                               The identifer of the target device
+ * @param device                               The identifier of the target device
  * @param bitType                              Flag that specifies the bit-type of the errors. 
  * @param counterType                          Flag that specifies the counter-type of the errors. 
  * @param eccCounts                            Reference in which to return the specified ECC errors
@@ -1132,7 +1398,7 @@ nvmlReturn_t DECLDIR nvmlDeviceGetTotalEccErrors(nvmlDevice_t device, nvmlEccBit
  * @return 
  *         - \ref NVML_SUCCESS                 if \a eccCounts has been populated
  *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
- *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device, \a bitType or \a counterType is invalid, or \a eccCounts is null
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device, \a bitType or \a counterType is invalid, or \a eccCounts is NULL
  *         - \ref NVML_ERROR_NOT_SUPPORTED     if the device does not support this feature
  *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
  *
@@ -1141,28 +1407,28 @@ nvmlReturn_t DECLDIR nvmlDeviceGetTotalEccErrors(nvmlDevice_t device, nvmlEccBit
 nvmlReturn_t DECLDIR nvmlDeviceGetDetailedEccErrors(nvmlDevice_t device, nvmlEccBitType_t bitType, nvmlEccCounterType_t counterType, nvmlEccErrorCounts_t *eccCounts);
 
 /**
- * Retrieve the current utilization rates for the device's major subsystems.
+ * Retrieves the current utilization rates for the device's major subsystems.
  *
- * For Tesla products, and Quadro products from the Fermi family.
+ * For Tesla &tm; products, and Quadro &reg; products from the Fermi family.
  *
  * See \ref nvmlUtilization_t for details on available utilization rates.
  *
- * @param device                               The identifer of the target device
+ * @param device                               The identifier of the target device
  * @param utilization                          Reference in which to return the utilization information
  * 
  * @return 
  *         - \ref NVML_SUCCESS                 if \a utilization has been populated
  *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
- *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device is invalid or \a utilization is null
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device is invalid or \a utilization is NULL
  *         - \ref NVML_ERROR_NOT_SUPPORTED     if the device does not support this feature
  *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
  */
 nvmlReturn_t DECLDIR nvmlDeviceGetUtilizationRates(nvmlDevice_t device, nvmlUtilization_t *utilization);
 
 /**
- * Retrieve the current and pending driver model for the device.
+ * Retrieves the current and pending driver model for the device.
  *
- * For Tesla products, and Quadro products from the Fermi family.
+ * For Tesla &tm; products, and Quadro &reg; products from the Fermi family.
  * For windows only.
  *
  * On Windows platforms the device driver can run in either WDDM or WDM (TCC) mode. If a display is attached
@@ -1170,14 +1436,14 @@ nvmlReturn_t DECLDIR nvmlDeviceGetUtilizationRates(nvmlDevice_t device, nvmlUtil
  *
  * See \ref nvmlDriverModel_t for details on available driver models.
  *
- * @param device                               The identifer of the target device
+ * @param device                               The identifier of the target device
  * @param current                              Reference in which to return the current driver model
  * @param pending                              Reference in which to return the pending driver model
  * 
  * @return 
  *         - \ref NVML_SUCCESS                 if \a current and \a pending have been populated
  *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
- *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device is invalid or either of \a current or \a pending is null
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device is invalid or both \a current and \a pending are NULL
  *         - \ref NVML_ERROR_NOT_SUPPORTED     if the platform is not windows
  *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
  * 
@@ -1185,11 +1451,61 @@ nvmlReturn_t DECLDIR nvmlDeviceGetUtilizationRates(nvmlDevice_t device, nvmlUtil
  */
 nvmlReturn_t DECLDIR nvmlDeviceGetDriverModel(nvmlDevice_t device, nvmlDriverModel_t *current, nvmlDriverModel_t *pending);
 
+/**
+ * Get VBIOS version of the device.
+ *
+ * For all products.
+ *
+ * The VBIOS version may change from time to time. It will not exceed 32 characters in length 
+ * (including the NULL terminator). 
+ *
+ * @param device                               The identifier of the target device
+ * @param version                              Reference to which to return the VBIOS version
+ * @param length                               The maximum allowed length of the string returned in \a version
+ * 
+ * @return 
+ *         - \ref NVML_SUCCESS                 if \a version has been set
+ *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device is invalid, or \a version is NULL
+ *         - \ref NVML_ERROR_INSUFFICIENT_SIZE if \a length is too small 
+ *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
+ */
+nvmlReturn_t DECLDIR nvmlDeviceGetVbiosVersion(nvmlDevice_t device, char * version, unsigned int length);
+
+/**
+ * Get information about processes with a compute context on a device
+ *
+ * For Tesla &tm; and Quadro &reg; products from the Fermi family.
+ *
+ * This function returns information only about compute running processes (e.g. CUDA application which have
+ * active context). Any graphics applications (e.g. using OpenGL, DirectX) won't be listed by this function.
+ *
+ * Keep in mind that information returned by this call is dynamic and the number of elements might change in
+ * time. Allocate more space for \a infos table in case new compute processes are spawned.
+ *
+ * @param device                               The identifier of the target device
+ * @param infoCount                            Reference in which to provide the \a infos array size, and
+ *                                             to return the number of returned elements
+ * @param infos                                Reference in which to return the process information
+ * 
+ * @return 
+ *         - \ref NVML_SUCCESS                 if \a infoCount and \a infos have been populated
+ *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
+ *         - \ref NVML_ERROR_INSUFFICIENT_SIZE if \a infoCount indicates that the \a infos array is too small
+ *                                             \a infoCount will contain minimal amount of space necessary for
+ *                                             the call to complete
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device is invalid, either of \a infoCount or \a infos is NULL
+ *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
+ *
+ * @see \ref nvmlSystemGetProcessName
+ */
+nvmlReturn_t DECLDIR nvmlDeviceGetComputeRunningProcesses(nvmlDevice_t device, unsigned int *infoCount, nvmlProcessInfo_t *infos);
+
 /** @} */
 
 /***************************************************************************************************/
-/** @defgroup group10 Unit Commands
- *  This page describes NVML operations that change the state of the unit. For S-class products.
+/** @defgroup nvmlUnitCommands Unit Commands
+ *  This chapter describes NVML operations that change the state of the unit. For S-class products.
  *  Each of these requires root/admin access. Non-admin users will see an NVML_ERROR_NO_PERMISSION
  *  error code when invoking any of these methods.
  *  @{
@@ -1203,13 +1519,14 @@ nvmlReturn_t DECLDIR nvmlDeviceGetDriverModel(nvmlDevice_t device, nvmlDriverMod
  * Requires root/admin permissions.
  *
  * This operation takes effect immediately.
+ * 
  *
  * <b>Current S-Class products don't provide unique LEDs for each unit. As such, both front 
- * and back LEDs will be toggled in unision regardless of which unit is specified with this command.</b>
+ * and back LEDs will be toggled in unison regardless of which unit is specified with this command.</b>
  *
  * See \ref nvmlLedColor_t for available colors.
  *
- * @param unit                                 The identifer of the target unit
+ * @param unit                                 The identifier of the target unit
  * @param color                                The target LED color
  * 
  * @return 
@@ -1217,7 +1534,7 @@ nvmlReturn_t DECLDIR nvmlDeviceGetDriverModel(nvmlDevice_t device, nvmlDriverMod
  *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
  *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a unit or \a color is invalid
  *         - \ref NVML_ERROR_NOT_SUPPORTED     if this is not an S-class product
- *         - \ref NVML_ERROR_NO_PERMISSION     if the user doesn't have permision to perform this operation
+ *         - \ref NVML_ERROR_NO_PERMISSION     if the user doesn't have permission to perform this operation
  *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
  * 
  * @see nvmlUnitGetLedState()
@@ -1227,8 +1544,8 @@ nvmlReturn_t DECLDIR nvmlUnitSetLedState(nvmlUnit_t unit, nvmlLedColor_t color);
 /** @} */
 
 /***************************************************************************************************/
-/** @defgroup group5 Device Commands
- *  This page describes NVML operations that change the state of the device.
+/** @defgroup nvmlDeviceCommands Device Commands
+ *  This chapter describes NVML operations that change the state of the device.
  *  Each of these requires root/admin access. Non-admin users will see an NVML_ERROR_NO_PERMISSION
  *  error code when invoking any of these methods.
  *  @{
@@ -1250,15 +1567,15 @@ nvmlReturn_t DECLDIR nvmlUnitSetLedState(nvmlUnit_t unit, nvmlLedColor_t color);
  *
  * See \ref nvmlEnableState_t for available modes.
  *
- * @param device                               The identifer of the target device
+ * @param device                               The identifier of the target device
  * @param mode                                 The target persistence mode
  * 
  * @return 
  *         - \ref NVML_SUCCESS                 if the persistence mode was set
  *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
- *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device is invalid
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device is invalid or \a mode is invalid
  *         - \ref NVML_ERROR_NOT_SUPPORTED     if the device does not support this feature
- *         - \ref NVML_ERROR_NO_PERMISSION     if the user doesn't have permision to perform this operation
+ *         - \ref NVML_ERROR_NO_PERMISSION     if the user doesn't have permission to perform this operation
  *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
  *
  * @see nvmlDeviceGetPersistenceMode()
@@ -1281,15 +1598,15 @@ nvmlReturn_t DECLDIR nvmlDeviceSetPersistenceMode(nvmlDevice_t device, nvmlEnabl
  *
  * See \ref nvmlComputeMode_t for details on available compute modes.
  *
- * @param device                               The identifer of the target device
+ * @param device                               The identifier of the target device
  * @param mode                                 The target compute mode
  * 
  * @return 
  *         - \ref NVML_SUCCESS                 if the compute mode was set
  *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
- *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device is invalid
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device is invalid or \a mode is invalid
  *         - \ref NVML_ERROR_NOT_SUPPORTED     if the device does not support this feature
- *         - \ref NVML_ERROR_NO_PERMISSION     if the user doesn't have permision to perform this operation
+ *         - \ref NVML_ERROR_NO_PERMISSION     if the user doesn't have permission to perform this operation
  *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
  *
  * @see nvmlDeviceGetComputeMode()
@@ -1299,7 +1616,7 @@ nvmlReturn_t DECLDIR nvmlDeviceSetComputeMode(nvmlDevice_t device, nvmlComputeMo
 /**
  * Set the ECC mode for the device.
  *
- * For Tesla and Quadro products from the Fermi family.
+ * For Tesla &tm; and Quadro &reg; products from the Fermi family.
  * Requires \a NVML_INFOROM_ECC version 1.0 or higher.
  * Requires root/admin permissions.
  *
@@ -1309,15 +1626,15 @@ nvmlReturn_t DECLDIR nvmlDeviceSetComputeMode(nvmlDevice_t device, nvmlComputeMo
  *
  * See \ref nvmlEnableState_t for details on available modes.
  *
- * @param device                               The identifer of the target device
+ * @param device                               The identifier of the target device
  * @param ecc                                  The target ECC mode
  * 
  * @return 
  *         - \ref NVML_SUCCESS                 if the ECC mode was set
  *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
- *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device is invalid
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device is invalid or \a ecc is invalid
  *         - \ref NVML_ERROR_NOT_SUPPORTED     if the device does not support this feature
- *         - \ref NVML_ERROR_NO_PERMISSION     if the user doesn't have permision to perform this operation
+ *         - \ref NVML_ERROR_NO_PERMISSION     if the user doesn't have permission to perform this operation
  *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
  *
  * @see nvmlDeviceGetEccMode()
@@ -1327,10 +1644,11 @@ nvmlReturn_t DECLDIR nvmlDeviceSetEccMode(nvmlDevice_t device, nvmlEnableState_t
 /**
  * Clear the ECC error counts for the device.
  *
- * For Tesla and Quadro products from the Fermi family.
+ * For Tesla &tm; and Quadro &reg; products from the Fermi family.
  * Requires \a NVML_INFOROM_ECC version 2.0 or higher to clear aggregate location-based ECC counts.
  * Requires \a NVML_INFOROM_ECC version 1.0 or higher to clear all other ECC counts.
  * Requires root/admin permissions.
+ * Requires ECC Mode to be enabled.
  *
  * Sets all of the specified ECC counters to 0, including both detailed and total counts.
  *
@@ -1338,15 +1656,15 @@ nvmlReturn_t DECLDIR nvmlDeviceSetEccMode(nvmlDevice_t device, nvmlEnableState_t
  *
  * See \ref nvmlEccCounterType_t for details on available counter types.
  *
- * @param device                               The identifer of the target device
+ * @param device                               The identifier of the target device
  * @param counterType                          Flag that indicates which type of errors should be cleared.
  * 
  * @return 
  *         - \ref NVML_SUCCESS                 if the error counts were cleared
  *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
- *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device is invalid
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device is invalid or \a counterType is invalid
  *         - \ref NVML_ERROR_NOT_SUPPORTED     if the device does not support this feature
- *         - \ref NVML_ERROR_NO_PERMISSION     if the user doesn't have permision to perform this operation
+ *         - \ref NVML_ERROR_NO_PERMISSION     if the user doesn't have permission to perform this operation
  *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
  *
  * @see 
@@ -1358,7 +1676,7 @@ nvmlReturn_t DECLDIR nvmlDeviceClearEccErrorCounts(nvmlDevice_t device, nvmlEccC
 /**
  * Set the driver model for the device.
  *
- * For Tesla products, and Quadro products from the Fermi family.
+ * For Tesla &tm; products, and Quadro &reg; products from the Fermi family.
  * For windows only.
  * Requires root/admin permissions.
  *
@@ -1383,7 +1701,7 @@ nvmlReturn_t DECLDIR nvmlDeviceClearEccErrorCounts(nvmlDevice_t device, nvmlEccC
  * @return 
  *         - \ref NVML_SUCCESS                 if the driver model has been set
  *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
- *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device is invalid
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device is invalid or \a driverModel is invalid
  *         - \ref NVML_ERROR_NOT_SUPPORTED     if the platform is not windows or the device does not support this feature
  *         - \ref NVML_ERROR_NO_PERMISSION     if the user doesn't have permission to perform this operation
  *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
@@ -1393,6 +1711,135 @@ nvmlReturn_t DECLDIR nvmlDeviceClearEccErrorCounts(nvmlDevice_t device, nvmlEccC
 nvmlReturn_t DECLDIR nvmlDeviceSetDriverModel(nvmlDevice_t device, nvmlDriverModel_t driverModel, unsigned int flags);
 
 /** @} */
+
+/***************************************************************************************************/
+/** @defgroup nvmlEvents Event Handling Methods
+ * This chapter describes methods that NVML can perform against each device to register and wait for 
+ * some event to occur.
+ *  @{
+ */
+/***************************************************************************************************/
+
+/**
+ * Create an empty set of events.
+ * Event set should be freed by \ref nvmlEventSetFree
+ *
+ * @param set                                  Reference in which to return the event handle
+ * 
+ * @return 
+ *         - \ref NVML_SUCCESS                 if the event has been set
+ *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a set is NULL
+ *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
+ * 
+ * @see nvmlEventSetFree
+ */
+nvmlReturn_t DECLDIR nvmlEventSetCreate(nvmlEventSet_t *set);
+
+/**
+ * Starts recording of events on a specified devices and add the events to specified \ref nvmlEventSet_t
+ *
+ * For Tesla &tm; products, and Quadro &reg; products from the Fermi family.
+ * Ecc events are available only on ECC enabled devices (see \ref nvmlDeviceGetTotalEccErrors)
+ * Power capping events are available only on Power Management enabled devices (see \ref nvmlDeviceGetPowerManagementMode)
+ *
+ * For linux only.
+ *
+ * \b IMPORTANT: Operations on \a set are not thread safe
+ *
+ * This call starts recording of events on specific device.
+ * All events that occurred before this call are not recorded.
+ * Checking if some event occurred can be done with \ref nvmlEventSetWait
+ *
+ * @param device                               The identifier of the target device
+ * @param eventTypes                           Bitmask of \ref nvmlEventType to record
+ * @param set                                  Set to which add new event types
+ * 
+ * @return 
+ *         - \ref NVML_SUCCESS                 if the event has been set
+ *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a eventTypes is invalid or \a set is NULL
+ *         - \ref NVML_ERROR_NOT_SUPPORTED     if the platform does not support this feature or some of requested event types
+ *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
+ * 
+ * @see nvmlEventType
+ * @see nvmlDeviceGetSupportedEventTypes
+ * @see nvmlEventSetWait
+ * @see nvmlEventSetFree
+ */
+nvmlReturn_t DECLDIR nvmlDeviceRegisterEvents(nvmlDevice_t device, unsigned long long eventTypes, nvmlEventSet_t set);
+
+/**
+ * Returns information about events supported on device
+ *
+ * For all products.
+ *
+ * Events are not supported on Windows. So this function returns an empty mask in \a eventTypes on Windows.
+ *
+ * @param device                               The identifier of the target device
+ * @param eventTypes                           Reference in which to return bitmask of supported events
+ * 
+ * @return 
+ *         - \ref NVML_SUCCESS                 if the eventTypes has been set
+ *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a eventType is NULL
+ *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
+ * 
+ * @see nvmlEventType
+ * @see nvmlDeviceRegisterEvents
+ */
+nvmlReturn_t DECLDIR nvmlDeviceGetSupportedEventTypes(nvmlDevice_t device, unsigned long long *eventTypes);
+
+/**
+ * Waits on events and delivers events
+ *
+ * For Tesla &tm; products, and Quadro &reg; products from the Fermi family.
+ *
+ * If some events are ready to be delivered at the time of the call, function returns immediately.
+ * If there are no events ready to be delivered, function sleeps till event arrives 
+ * but not longer than specified timeout. This function in certain conditions can return before
+ * specified timeout passes (e.g. when interrupt arrives)
+ * 
+ * @param set                                  Reference to set of events to wait on
+ * @param data                                 Reference in which to return event data
+ * @param timeoutms                            Maximum amount of wait time in ms for registered event
+ * 
+ * @return 
+ *         - \ref NVML_SUCCESS                 if the data has been set
+ *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a data is NULL
+ *         - \ref NVML_ERROR_TIMEOUT           if no event arrived in specified timeout or interrupt arrived
+ *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
+ * 
+ * @see nvmlEventType
+ * @see nvmlDeviceRegisterEvents
+ */
+nvmlReturn_t DECLDIR nvmlEventSetWait(nvmlEventSet_t set, nvmlEventData_t * data, unsigned int timeoutms);
+
+/**
+ * Releases events in the set
+ *
+ * For Tesla &tm; products, and Quadro &reg; products from the Fermi family.
+ *
+ * @param set                                  Reference to events to be released 
+ * 
+ * @return 
+ *         - \ref NVML_SUCCESS                 if the event has been successfully released
+ *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
+ *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
+ * 
+ * @see nvmlDeviceRegisterEvents
+ */
+nvmlReturn_t DECLDIR nvmlEventSetFree(nvmlEventSet_t set);
+
+/** @} */
+
+/**
+ * NVML API versioning support
+ */
+#if defined(__NVML_API_VERSION_INTERNAL)
+#undef nvmlDeviceGetPciInfo
+#endif
 
 #ifdef __cplusplus
 }

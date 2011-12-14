@@ -38,7 +38,7 @@ require Exporter;
 
 our @ISA = qw(Exporter);
 
-our $VERSION = "2.0";
+our $VERSION = "2.285.0";
 
 our @EXPORT_OK =
     qw(
@@ -46,6 +46,10 @@ our @EXPORT_OK =
      nvmlShutdown
      nvmlErrorString
      nvmlSystemGetDriverVersion
+     nvmlSystemGetHicVersion
+     nvmlSystemGetHicVersionCount
+     nvmlSystemGetNVMLVersion
+     nvmlSystemGetProcessName
      nvmlUnitGetCount
      nvmlUnitGetHandleByIndex
      nvmlUnitGetUnitInfo
@@ -66,9 +70,11 @@ our @EXPORT_OK =
      nvmlDeviceGetPersistenceMode
      nvmlDeviceGetPciInfo
      nvmlDeviceGetClockInfo
+     nvmlDeviceGetMaxClockInfo
      nvmlDeviceGetFanSpeed
      nvmlDeviceGetTemperature
      nvmlDeviceGetPowerState
+     nvmlDeviceGetPerformanceState
      nvmlDeviceGetPowerManagementMode
      nvmlDeviceGetPowerManagementLimit
      nvmlDeviceGetPowerUsage
@@ -79,12 +85,19 @@ our @EXPORT_OK =
      nvmlDeviceGetDetailedEccErrors
      nvmlDeviceGetUtilizationRates
      nvmlDeviceGetDriverModel
+     nvmlDeviceGetVbiosVersion
+     nvmlDeviceGetComputeRunningProcesses
      nvmlUnitSetLedState
      nvmlDeviceSetPersistenceMode
      nvmlDeviceSetComputeMode
      nvmlDeviceSetEccMode
      nvmlDeviceClearEccErrorCounts
      nvmlDeviceSetDriverModel
+     nvmlEventSetCreate
+     nvmlDeviceRegisterEvents
+     nvmlDeviceGetSupportedEventTypes
+     nvmlEventSetWait
+     nvmlEventSetFree
      
      $NVML_FEATURE_DISABLED
      $NVML_FEATURE_ENABLED
@@ -133,11 +146,19 @@ our @EXPORT_OK =
      $NVML_ERROR_NOT_FOUND
      $NVML_ERROR_INSUFFICIENT_SIZE
      $NVML_ERROR_INSUFFICIENT_POWER
+     $NVML_ERROR_DRIVER_NOT_LOADED
+     $NVML_ERROR_TIMEOUT
      $NVML_ERROR_UNKNOWN
      $NVML_FAN_NORMAL
      $NVML_FAN_FAILED
      $NVML_LED_COLOR_GREEN
      $NVML_LED_COLOR_AMBER
+     $nvmlEventTypeSingleBitEccError
+     $nvmlEventTypeDoubleBitEccError
+     $nvmlEventTypePState
+     $nvmlEventTypeXidCriticalError
+     $nvmlEventTypeNone
+     $nvmlEventTypeAll
     );
 
 # use nvidia::ml qw(:all);
@@ -158,36 +179,75 @@ foreach my $export (@EXPORT_OK)
 
 
 ## Method definitions
-*nvmlInit        = *nvidia::ml::bindings::nvmlInit;
-*nvmlShutdown    = *nvidia::ml::bindings::nvmlShutdown;
-
-sub nvmlErrorString
-{
-    my $code = shift;
-    my %conversion =
-                (
-                    $nvidia::ml::NVML_SUCCESS                   => 'Success',
-                    $nvidia::ml::NVML_ERROR_UNINITIALIZED       => 'Uninitialized',
-                    $nvidia::ml::NVML_ERROR_INVALID_ARGUMENT    => 'Invalid Argument',
-                    $nvidia::ml::NVML_ERROR_NOT_SUPPORTED       => 'N/A',
-                    $nvidia::ml::NVML_ERROR_NO_PERMISSION       => 'Insufficient Permissions',
-                    $nvidia::ml::NVML_ERROR_ALREADY_INITIALIZED => 'Already Initialized',
-                    $nvidia::ml::NVML_ERROR_NOT_FOUND           => 'Not Found',
-                    $nvidia::ml::NVML_ERROR_INSUFFICIENT_SIZE   => 'Insufficient Size',
-                    $nvidia::ml::NVML_ERROR_UNKNOWN             => 'Unknown Error'
-                );
-    my $str = $conversion{$code};
-    if (not defined $str)
-    {
-        $str = $conversion{$nvidia::ml::NVML_ERROR_UNKNOWN};
-    }
-    return $str;
-}
+*nvmlInit                   = *nvidia::ml::bindings::nvmlInit;
+*nvmlShutdown               = *nvidia::ml::bindings::nvmlShutdown;
+*nvmlErrorString            = *nvidia::ml::bindings::nvmlErrorString;
 
 sub nvmlSystemGetDriverVersion
 {
     # NVML API 1.0 requires a buffer >80
     return nvidia::ml::bindings::nvmlSystemGetDriverVersion(81);
+}
+
+# Added to API
+sub nvmlSystemGetHicVersionCount
+{
+    my $ret;
+    my $count = 0;
+    $ret = nvidia::ml::bindings::nvmlSystemGetHicVersion(\$count, undef);
+    if ($ret == $nvidia::ml::bindings::NVML_ERROR_INSUFFICIENT_SIZE)
+    {
+        $ret = $nvidia::ml::bindings::NVML_SUCCESS;
+    }
+    return ($ret, $count);
+}
+
+sub nvmlSystemGetHicVersion
+{
+    my $ret;
+    my $count;
+    my $hics;
+    my @hicArr;
+    my $i = 0;
+    
+    # get the count
+    ($ret, $count) = nvmlSystemGetHicVersionCount();
+    if ($ret != $nvidia::ml::bindings::NVML_SUCCESS or $count == 0)
+    {
+        return ($ret, \())
+    }
+    
+    $hics = nvidia::ml::bindings::new_nvmlHwbcEntry($count);
+    
+    $ret = nvidia::ml::bindings::nvmlSystemGetHicVersion(\$count, $hics);
+    
+    if ($ret != $nvidia::ml::bindings::NVML_SUCCESS)
+    {
+        return ($ret, \())
+    }
+    
+    @hicArr = ();
+    foreach $i (0..$count-1)
+    {
+        my %infohash = ();
+        my $item = nvidia::ml::bindings::nvmlHwbcEntry_getitem($hics, $i);
+        bless $item, 'nvidia::ml::bindings::nvmlHwbcEntry_t';
+        $infohash{'hwbcId'} = $item->swig_hwbcId_get();
+        $infohash{'firmwareVersion'} = $item->swig_firmwareVersion_get();
+        push @hicArr, \%infohash;
+    }
+    return ($ret, \@hicArr);
+}
+
+sub nvmlSystemGetProcessName
+{
+    my $pid = shift;
+    return nvidia::ml::bindings::nvmlSystemGetProcessName($pid, 1024);
+}
+
+sub nvmlSystemGetNVMLVersion
+{
+    return nvidia::ml::bindings::nvmlSystemGetNVMLVersion(128);
 }
 
 *nvmlUnitGetCount            = *nvidia::ml::bindings::nvmlUnitGetCount;
@@ -200,13 +260,16 @@ sub nvmlUnitGetUnitInfo
     my $ret = nvidia::ml::bindings::nvmlUnitGetUnitInfo($handle, $info);
     
     my %infohash = ();
-    if ($ret == 0)
+    if ($ret == $nvidia::ml::bindings::NVML_SUCCESS)
     {
         $infohash{'name'} = $info->swig_name_get();
         $infohash{'id'} = $info->swig_id_get();
         $infohash{'serial'} = $info->swig_serial_get();
         $infohash{'firmwareVersion'} = $info->swig_firmwareVersion_get();
     }
+    
+    # C free
+    $info->DESTROY();
     
     return ($ret, \%infohash);
 }
@@ -217,11 +280,14 @@ sub nvmlUnitGetLedState
     my $ret = nvidia::ml::bindings::nvmlUnitGetLedState($handle, $state);
     
     my %infohash = ();
-    if ($ret == 0)
+    if ($ret == $nvidia::ml::bindings::NVML_SUCCESS)
     {
         $infohash{'cause'} = $state->swig_cause_get();
         $infohash{'color'} = $state->swig_color_get();
     }
+    
+    # C free
+    $state->DESTROY();
     
     return ($ret, \%infohash);
 }
@@ -232,13 +298,16 @@ sub nvmlUnitGetPsuInfo
     my $ret = nvidia::ml::bindings::nvmlUnitGetPsuInfo($handle, $info);
     
     my %infohash = ();
-    if ($ret == 0)
+    if ($ret == $nvidia::ml::bindings::NVML_SUCCESS)
     {
         $infohash{'state'} = $info->swig_state_get();
         $infohash{'current'} = $info->swig_current_get();
         $infohash{'voltage'} = $info->swig_voltage_get();
         $infohash{'power'} = $info->swig_power_get();
     }
+    
+    # C free
+    $info->DESTROY();
     
     return ($ret, \%infohash);
 }
@@ -255,10 +324,11 @@ sub nvmlUnitGetFanSpeedInfo
     my $ret = nvidia::ml::bindings::nvmlUnitGetFanSpeedInfo($handle, $info);
     
     my @fanInfo = ();
-    if ($ret == 0)
+    if ($ret == $nvidia::ml::bindings::NVML_SUCCESS)
     {
         my $fans = $info->swig_fans_get();
         my $count = $info->swig_count_get();
+        
         
         foreach my $i (0..$count-1)
         {
@@ -318,6 +388,7 @@ sub nvmlUnitGetDevices
 *nvmlDeviceGetCount          = *nvidia::ml::bindings::nvmlDeviceGetCount;
 *nvmlDeviceGetHandleByIndex  = *nvidia::ml::bindings::nvmlDeviceGetHandleByIndex;
 *nvmlDeviceGetHandleBySerial = *nvidia::ml::bindings::nvmlDeviceGetHandleBySerial;
+*nvmlDeviceGetHandleByPciBusId = *nvidia::ml::bindings::nvmlDeviceGetHandleByPciBusId;
 
 sub nvmlDeviceGetName
 {
@@ -348,25 +419,41 @@ sub nvmlDeviceGetPciInfo
 {
     my $handle = shift;
     my $info = new nvidia::ml::bindings::nvmlPciInfo_t();
-    my $ret = nvidia::ml::bindings::nvmlDeviceGetPciInfo($handle, $info);
+    my $ret = nvidia::ml::bindings::nvmlDeviceGetPciInfo_v2($handle, $info);
     
     my %infohash = ();
-    if ($ret == 0)
+    if ($ret == $nvidia::ml::bindings::NVML_SUCCESS)
     {
         $infohash{'busId'} = $info->swig_busId_get();
         $infohash{'domain'} = $info->swig_domain_get();
         $infohash{'bus'} = $info->swig_bus_get();
         $infohash{'device'} = $info->swig_device_get();
         $infohash{'pciDeviceId'} = $info->swig_pciDeviceId_get();
+        
+        # added in 2.0 API
+        $infohash{'pciSubSystemId'} = $info->swig_pciSubSystemId_get();
+        $infohash{'reserved0'} = $info->swig_reserved0_get();
+        $infohash{'reserved1'} = $info->swig_reserved1_get();
+        $infohash{'reserved2'} = $info->swig_reserved2_get();
+        $infohash{'reserved3'} = $info->swig_reserved3_get();
     }
+    
+    # C free
+    $info->DESTROY();
     
     return ($ret, \%infohash);
 }
 
 *nvmlDeviceGetClockInfo            = *nvidia::ml::bindings::nvmlDeviceGetClockInfo;
+*nvmlDeviceGetMaxClockInfo         = *nvidia::ml::bindings::nvmlDeviceGetMaxClockInfo;
 *nvmlDeviceGetFanSpeed             = *nvidia::ml::bindings::nvmlDeviceGetFanSpeed;
 *nvmlDeviceGetTemperature          = *nvidia::ml::bindings::nvmlDeviceGetTemperature;
+
+# DEPRECATED Use nvmlDeviceGetPerformanceState instead
 *nvmlDeviceGetPowerState           = *nvidia::ml::bindings::nvmlDeviceGetPowerState;
+
+*nvmlDeviceGetPerformanceState     = *nvidia::ml::bindings::nvmlDeviceGetPerformanceState;
+
 *nvmlDeviceGetPowerManagementMode  = *nvidia::ml::bindings::nvmlDeviceGetPowerManagementMode;
 *nvmlDeviceGetPowerManagementLimit = *nvidia::ml::bindings::nvmlDeviceGetPowerManagementLimit;
 *nvmlDeviceGetPowerUsage           = *nvidia::ml::bindings::nvmlDeviceGetPowerUsage;
@@ -378,12 +465,15 @@ sub nvmlDeviceGetMemoryInfo
     my $ret = nvidia::ml::bindings::nvmlDeviceGetMemoryInfo($handle, $info);
     
     my %infohash = ();
-    if ($ret == 0)
+    if ($ret == $nvidia::ml::bindings::NVML_SUCCESS)
     {
         $infohash{'total'} = $info->swig_total_get();
         $infohash{'free'}  = $info->swig_free_get();
         $infohash{'used'}  = $info->swig_used_get();
     }
+    
+    # C free
+    $info->DESTROY();
     
     return ($ret, \%infohash);
 }
@@ -401,13 +491,16 @@ sub nvmlDeviceGetDetailedEccErrors
     my $ret = nvidia::ml::bindings::nvmlDeviceGetDetailedEccErrors($handle, $bitType, $counterType, $info);
     
     my %infohash = ();
-    if ($ret == 0)
+    if ($ret == $nvidia::ml::bindings::NVML_SUCCESS)
     {
         $infohash{'l1Cache'}      = $info->swig_l1Cache_get();
         $infohash{'l2Cache'}      = $info->swig_l2Cache_get();
         $infohash{'deviceMemory'} = $info->swig_deviceMemory_get();
         $infohash{'registerFile'} = $info->swig_registerFile_get();
     }
+    
+    # C free
+    $info->DESTROY();
     
     return ($ret, \%infohash);
 }
@@ -418,16 +511,81 @@ sub nvmlDeviceGetUtilizationRates
     my $ret = nvidia::ml::bindings::nvmlDeviceGetUtilizationRates($handle, $info);
     
     my %infohash = ();
-    if ($ret == 0)
+    if ($ret == $nvidia::ml::bindings::NVML_SUCCESS)
     {
         $infohash{'gpu'}    = $info->swig_gpu_get();
         $infohash{'memory'} = $info->swig_memory_get();
     }
     
+    # C free
+    $info->DESTROY();
+    
     return ($ret, \%infohash);
 }
 
 *nvmlDeviceGetDriverModel      = *nvidia::ml::bindings::nvmlDeviceGetDriverModel;
+
+sub nvmlDeviceGetVbiosVersion
+{
+    my $handle = shift;
+    return nvidia::ml::bindings::nvmlDeviceGetVbiosVersion($handle, 32);
+}
+
+sub nvmlDeviceGetComputeRunningProcesses
+{
+    my $handle = shift;
+    my $infoCount;
+    my $infos;
+    my $ret;
+    
+    ($ret, $infoCount) = nvidia::ml::bindings::_nvmlDeviceGetComputeRunningProcesses($handle, 0, undef);
+    if ($ret == $nvidia::ml::bindings::NVML_SUCCESS)
+    {
+        # empty set
+        my @set = ();
+        return ($ret, \@set);
+    }
+    
+    if ($ret != $nvidia::ml::bindings::NVML_ERROR_INSUFFICIENT_SIZE)
+    {
+        # error
+        my @set = ();
+        return ($ret, \@set);
+    }
+    
+    # oversize the array incase processes are created
+    $infoCount = $infoCount * 2 + 5;
+    
+    # create an array of the needed size
+    my $procs = nvidia::ml::bindings::_createProcessArray($infoCount);
+    
+    # get the devices
+    ($ret, $infoCount) = nvidia::ml::bindings::_nvmlDeviceGetComputeRunningProcesses($handle, $infoCount, $procs);
+    
+    my @pl_procs = ();
+    if ($ret == $nvidia::ml::bindings::NVML_SUCCESS)
+    {
+        foreach my $i (0..$infoCount-1)
+        {
+            my $proc = nvidia::ml::bindings::_getProcessByIndex($procs, $i);
+            bless $proc, 'nvidia::ml::bindings::nvmlProcessInfo_t';
+            
+            my %infohash = ();
+            $infohash{'pid'}           = $proc->swig_pid_get();
+            $infohash{'usedGpuMemory'} = $proc->swig_usedGpuMemory_get();
+            
+            if ($infohash{'usedGpuMemory'} == nvidia::ml::bindings::_nvmlGetValueNotAvailable_ulonglong())
+            {
+                # set to undef instead
+                $infohash{'usedGpuMemory'} = undef;
+            }
+            push @pl_procs, \%infohash;
+        }
+    }
+    nvidia::ml::bindings::_freeProcessArray($procs);
+    
+    return ($ret, \@pl_procs);
+}
 
 *nvmlUnitSetLedState           = *nvidia::ml::bindings::nvmlUnitSetLedState;
 *nvmlDeviceSetPersistenceMode  = *nvidia::ml::bindings::nvmlDeviceSetPersistenceMode;
@@ -435,6 +593,35 @@ sub nvmlDeviceGetUtilizationRates
 *nvmlDeviceSetEccMode          = *nvidia::ml::bindings::nvmlDeviceSetEccMode;
 *nvmlDeviceClearEccErrorCounts = *nvidia::ml::bindings::nvmlDeviceClearEccErrorCounts;
 *nvmlDeviceSetDriverModel      = *nvidia::ml::bindings::nvmlDeviceSetDriverModel;
+
+# events
+*nvmlEventSetCreate               = *nvidia::ml::bindings::nvmlEventSetCreate;
+*nvmlDeviceRegisterEvents         = *nvidia::ml::bindings::nvmlDeviceRegisterEvents;
+*nvmlDeviceGetSupportedEventTypes = *nvidia::ml::bindings::nvmlDeviceGetSupportedEventTypes;
+
+sub nvmlEventSetWait
+{
+    my $set = shift;
+    my $timeoutms = shift;
+    my $data = new nvidia::ml::bindings::nvmlEventData_t();
+    my $ret;
+    
+    $ret = nvidia::ml::bindings::nvmlEventSetWait($set, $data, $timeoutms);
+    
+    my $retVal = undef;
+    if ($ret == $nvidia::ml::bindings::NVML_SUCCESS)
+    {
+        my %infohash = ();
+        $infohash{'device'}           = $data->swig_device_get();
+        $infohash{'eventType'}        = $data->swig_eventType_get();
+        $infohash{'reserved'}         = $data->swig_reserved_get();
+        $retVal = \%infohash;
+    }
+    $data->DESTROY();
+    return ($ret, $retVal);
+}
+
+*nvmlEventSetFree                 = *nvidia::ml::bindings::nvmlEventSetFree;
 
 1;
 __END__
@@ -450,23 +637,23 @@ nvidia::ml - Perl bindings to NVML, the NVIDIA Management Library
     nvmlInit();
  
     ($ret, $version) = nvmlSystemGetDriverVersion();
-    die nvmlErrorString($ret) unless $ret == $NVML_SUCCESS;
+    die nvmlErrorString($ret) unless $ret == $nvidia::ml::bindings::NVML_SUCCESS;
     print "Driver version: " . $version . "\n";
  
     ($ret, $count) = nvmlDeviceGetCount();
-    die nvmlErrorString($ret) unless $ret == $NVML_SUCCESS;
+    die nvmlErrorString($ret) unless $ret == $nvidia::ml::bindings::NVML_SUCCESS;
  
     for ($i=0; $i<$count; $i++)
     {
         ($ret, $handle) = nvmlDeviceGetHandleByIndex($i);
-        next if $ret != $NVML_SUCCESS;
+        next if $ret != $nvidia::ml::bindings::NVML_SUCCESS;
      
         ($ret, $speed) = nvmlDeviceGetFanSpeed($handle);
-        next if $ret != $NVML_SUCCESS;
+        next if $ret != $nvidia::ml::bindings::NVML_SUCCESS;
         print "Device " . $i . " fan speed: " . $speed . "%\n";
      
         ($ret, $info) = nvmlDeviceGetMemoryInfo($handle);
-        next if $ret != $NVML_SUCCESS;
+        next if $ret != $nvidia::ml::bindings::NVML_SUCCESS;
         $total = ($info->{"total"} / 1024 / 1024);
         print "Device " . $i . " total memory: " . $total . " MB\n";
     }
@@ -494,7 +681,7 @@ See EXPORTS and NVML documentation.  Perl methods wrap NVML functions, implement
 
 =over 4
 
-=item Perl methods accept the input arguements of the C function it wraps only.  All C function output parameters are returned after the return code, left to right
+=item Perl methods accept the input arguments of the C function it wraps only.  All C function output parameters are returned after the return code, left to right
 
  C:
  nvmlReturn_t nvmlDeviceGetEccMode(nvmlDevice_t device,
