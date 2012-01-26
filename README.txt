@@ -9,7 +9,7 @@ To install:
 perl Makefile.PL
 make
 make test
-make install
+sudo make install
 
 Read perldoc perlmodinstall for more information about installing
 
