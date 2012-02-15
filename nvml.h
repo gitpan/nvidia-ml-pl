@@ -168,8 +168,8 @@ typedef struct nvmlDevice_st* nvmlDevice_t;
 typedef struct nvmlPciInfo_st 
 {
     char busId[16];                  //!< The tuple domain:bus:device.function PCI identifier (&amp; NULL terminator)
-    unsigned int domain;             //!< The PCI domain on which the device's bus resides, 0 to 255
-    unsigned int bus;                //!< The bus on which the device resides, 0 to 255
+    unsigned int domain;             //!< The PCI domain on which the device's bus resides, 0 to 0xffff
+    unsigned int bus;                //!< The bus on which the device resides, 0 to 0xff
     unsigned int device;             //!< The device's id on the bus, 0 to 31
     unsigned int pciDeviceId;        //!< The combined 16-bit device id and 16-bit vendor id
     
