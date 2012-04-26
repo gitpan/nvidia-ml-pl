@@ -20,3 +20,7 @@ Version 2.285.0
 - Added new functions for NVML 2.285.  See NVML documentation for more information.
 - Added nvidia::smi tool as a sample app.
 
+Version 3.295.0
+- Added new functions for NVML 3.295.  See NVML documentation for more information.
+- Updated nvidia::smi tool
+

@@ -1489,36 +1489,37 @@ SWIG_Perl_SetModule(swig_module_info *module) {
 /* -------- TYPES TABLE (BEGIN) -------- */
 
 #define SWIGTYPE_p_char swig_types[0]
-#define SWIGTYPE_p_nvmlClockType_enum swig_types[1]
-#define SWIGTYPE_p_nvmlDevice_st swig_types[2]
-#define SWIGTYPE_p_nvmlEccBitType_enum swig_types[3]
-#define SWIGTYPE_p_nvmlEccCounterType_enum swig_types[4]
-#define SWIGTYPE_p_nvmlEccErrorCounts_st swig_types[5]
-#define SWIGTYPE_p_nvmlEventData_st swig_types[6]
-#define SWIGTYPE_p_nvmlEventSet_st swig_types[7]
-#define SWIGTYPE_p_nvmlFanState_enum swig_types[8]
-#define SWIGTYPE_p_nvmlHwbcEntry_st swig_types[9]
-#define SWIGTYPE_p_nvmlInforomObject_enum swig_types[10]
-#define SWIGTYPE_p_nvmlLedColor_enum swig_types[11]
-#define SWIGTYPE_p_nvmlLedState_st swig_types[12]
-#define SWIGTYPE_p_nvmlMemory_st swig_types[13]
-#define SWIGTYPE_p_nvmlPSUInfo_st swig_types[14]
-#define SWIGTYPE_p_nvmlPciInfo_st swig_types[15]
-#define SWIGTYPE_p_nvmlProcessInfo_st swig_types[16]
-#define SWIGTYPE_p_nvmlReturn_enum swig_types[17]
-#define SWIGTYPE_p_nvmlTemperatureSensors_enum swig_types[18]
-#define SWIGTYPE_p_nvmlUnitFanInfo_st swig_types[19]
-#define SWIGTYPE_p_nvmlUnitFanSpeeds_st swig_types[20]
-#define SWIGTYPE_p_nvmlUnitInfo_st swig_types[21]
-#define SWIGTYPE_p_nvmlUnit_st swig_types[22]
-#define SWIGTYPE_p_nvmlUtilization_st swig_types[23]
-#define SWIGTYPE_p_p_nvmlDevice_st swig_types[24]
-#define SWIGTYPE_p_p_nvmlEventSet_st swig_types[25]
-#define SWIGTYPE_p_p_nvmlUnit_st swig_types[26]
-#define SWIGTYPE_p_unsigned_int swig_types[27]
-#define SWIGTYPE_p_unsigned_long_long swig_types[28]
-static swig_type_info *swig_types[30];
-static swig_module_info swig_module = {swig_types, 29, 0, 0, 0, 0};
+#define SWIGTYPE_p_int swig_types[1]
+#define SWIGTYPE_p_nvmlClockType_enum swig_types[2]
+#define SWIGTYPE_p_nvmlDevice_st swig_types[3]
+#define SWIGTYPE_p_nvmlEccBitType_enum swig_types[4]
+#define SWIGTYPE_p_nvmlEccCounterType_enum swig_types[5]
+#define SWIGTYPE_p_nvmlEccErrorCounts_st swig_types[6]
+#define SWIGTYPE_p_nvmlEventData_st swig_types[7]
+#define SWIGTYPE_p_nvmlEventSet_st swig_types[8]
+#define SWIGTYPE_p_nvmlFanState_enum swig_types[9]
+#define SWIGTYPE_p_nvmlHwbcEntry_st swig_types[10]
+#define SWIGTYPE_p_nvmlInforomObject_enum swig_types[11]
+#define SWIGTYPE_p_nvmlLedColor_enum swig_types[12]
+#define SWIGTYPE_p_nvmlLedState_st swig_types[13]
+#define SWIGTYPE_p_nvmlMemory_st swig_types[14]
+#define SWIGTYPE_p_nvmlPSUInfo_st swig_types[15]
+#define SWIGTYPE_p_nvmlPciInfo_st swig_types[16]
+#define SWIGTYPE_p_nvmlProcessInfo_st swig_types[17]
+#define SWIGTYPE_p_nvmlReturn_enum swig_types[18]
+#define SWIGTYPE_p_nvmlTemperatureSensors_enum swig_types[19]
+#define SWIGTYPE_p_nvmlUnitFanInfo_st swig_types[20]
+#define SWIGTYPE_p_nvmlUnitFanSpeeds_st swig_types[21]
+#define SWIGTYPE_p_nvmlUnitInfo_st swig_types[22]
+#define SWIGTYPE_p_nvmlUnit_st swig_types[23]
+#define SWIGTYPE_p_nvmlUtilization_st swig_types[24]
+#define SWIGTYPE_p_p_nvmlDevice_st swig_types[25]
+#define SWIGTYPE_p_p_nvmlEventSet_st swig_types[26]
+#define SWIGTYPE_p_p_nvmlUnit_st swig_types[27]
+#define SWIGTYPE_p_unsigned_int swig_types[28]
+#define SWIGTYPE_p_unsigned_long_long swig_types[29]
+static swig_type_info *swig_types[31];
+static swig_module_info swig_module = {swig_types, 30, 0, 0, 0, 0};
 #define SWIG_TypeQuery(name) SWIG_TypeQueryModule(&swig_module, &swig_module, name)
 #define SWIG_MangledTypeQuery(name) SWIG_MangledTypeQueryModule(&swig_module, &swig_module, name)
 
@@ -6099,10 +6100,55 @@ XS(_wrap_nvmlDeviceGetHandleBySerial) {
     }
     res1 = SWIG_AsCharPtrAndSize(ST(0), &buf1, NULL, &alloc1);
     if (!SWIG_IsOK(res1)) {
-      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "nvmlDeviceGetHandleBySerial" "', argument " "1"" of type '" "char *""'");
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "nvmlDeviceGetHandleBySerial" "', argument " "1"" of type '" "char const *""'");
     }
     arg1 = (char *)(buf1);
-    result = (nvmlReturn_t)nvmlDeviceGetHandleBySerial(arg1,arg2);
+    result = (nvmlReturn_t)nvmlDeviceGetHandleBySerial((char const *)arg1,arg2);
+    ST(argvi) = SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(result)); argvi++ ;
+    {
+      // ST(argvi) = convert(arg2)
+      SV *sv = sv_newmortal();
+      SWIG_MakePtr(sv, *arg2, SWIGTYPE_p_nvmlDevice_st, 0);
+      ST(argvi) = sv;
+      argvi++ ;
+    }
+    if (alloc1 == SWIG_NEWOBJ) free((char*)buf1);
+    
+    XSRETURN(argvi);
+  fail:
+    if (alloc1 == SWIG_NEWOBJ) free((char*)buf1);
+    
+    SWIG_croak_null();
+  }
+}
+
+
+XS(_wrap_nvmlDeviceGetHandleByUUID) {
+  {
+    char *arg1 = (char *) 0 ;
+    nvmlDevice_t *arg2 = (nvmlDevice_t *) 0 ;
+    int res1 ;
+    char *buf1 = 0 ;
+    int alloc1 = 0 ;
+    nvmlDevice_t temp2 ;
+    int argvi = 0;
+    nvmlReturn_t result;
+    dXSARGS;
+    
+    {
+      // when nvmlDevice_t* is an input
+      // perl caller does not provide an input
+      arg2 = &temp2;
+    }
+    if ((items < 1) || (items > 1)) {
+      SWIG_croak("Usage: nvmlDeviceGetHandleByUUID(uuid);");
+    }
+    res1 = SWIG_AsCharPtrAndSize(ST(0), &buf1, NULL, &alloc1);
+    if (!SWIG_IsOK(res1)) {
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "nvmlDeviceGetHandleByUUID" "', argument " "1"" of type '" "char const *""'");
+    }
+    arg1 = (char *)(buf1);
+    result = (nvmlReturn_t)nvmlDeviceGetHandleByUUID((char const *)arg1,arg2);
     ST(argvi) = SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(result)); argvi++ ;
     {
       // ST(argvi) = convert(arg2)
@@ -6144,10 +6190,10 @@ XS(_wrap_nvmlDeviceGetHandleByPciBusId) {
     }
     res1 = SWIG_AsCharPtrAndSize(ST(0), &buf1, NULL, &alloc1);
     if (!SWIG_IsOK(res1)) {
-      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "nvmlDeviceGetHandleByPciBusId" "', argument " "1"" of type '" "char *""'");
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "nvmlDeviceGetHandleByPciBusId" "', argument " "1"" of type '" "char const *""'");
     }
     arg1 = (char *)(buf1);
-    result = (nvmlReturn_t)nvmlDeviceGetHandleByPciBusId(arg1,arg2);
+    result = (nvmlReturn_t)nvmlDeviceGetHandleByPciBusId((char const *)arg1,arg2);
     ST(argvi) = SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(result)); argvi++ ;
     {
       // ST(argvi) = convert(arg2)
@@ -6464,6 +6510,166 @@ XS(_wrap_nvmlDeviceGetPciInfo_v2) {
     arg2 = (nvmlPciInfo_t *)(argp2);
     result = (nvmlReturn_t)nvmlDeviceGetPciInfo_v2(arg1,arg2);
     ST(argvi) = SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(result)); argvi++ ;
+    
+    
+    XSRETURN(argvi);
+  fail:
+    
+    
+    SWIG_croak_null();
+  }
+}
+
+
+XS(_wrap_nvmlDeviceGetMaxPcieLinkGeneration) {
+  {
+    nvmlDevice_t arg1 = (nvmlDevice_t) 0 ;
+    unsigned int *arg2 = (unsigned int *) 0 ;
+    unsigned int temp2 ;
+    int res2 = SWIG_TMPOBJ ;
+    int argvi = 0;
+    nvmlReturn_t result;
+    dXSARGS;
+    
+    arg2 = &temp2;
+    if ((items < 1) || (items > 1)) {
+      SWIG_croak("Usage: nvmlDeviceGetMaxPcieLinkGeneration(device);");
+    }
+    {
+      // arg1 = convert(ST(0))
+      if ((SWIG_ConvertPtr(ST(0),(void **) &arg1, SWIGTYPE_p_nvmlDevice_st,0)) == -1)
+      {
+        arg1 = NULL;
+      }
+    }
+    result = (nvmlReturn_t)nvmlDeviceGetMaxPcieLinkGeneration(arg1,arg2);
+    ST(argvi) = SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(result)); argvi++ ;
+    if (SWIG_IsTmpObj(res2)) {
+      if (argvi >= items) EXTEND(sp,1);  ST(argvi) = SWIG_From_unsigned_SS_int  SWIG_PERL_CALL_ARGS_1((*arg2)); argvi++  ;
+    } else {
+      int new_flags = SWIG_IsNewObj(res2) ? (SWIG_POINTER_OWN | 0) : 0;
+      if (argvi >= items) EXTEND(sp,1);  ST(argvi) = SWIG_NewPointerObj((void*)(arg2), SWIGTYPE_p_unsigned_int, new_flags); argvi++  ;
+    }
+    
+    
+    XSRETURN(argvi);
+  fail:
+    
+    
+    SWIG_croak_null();
+  }
+}
+
+
+XS(_wrap_nvmlDeviceGetMaxPcieLinkWidth) {
+  {
+    nvmlDevice_t arg1 = (nvmlDevice_t) 0 ;
+    unsigned int *arg2 = (unsigned int *) 0 ;
+    unsigned int temp2 ;
+    int res2 = SWIG_TMPOBJ ;
+    int argvi = 0;
+    nvmlReturn_t result;
+    dXSARGS;
+    
+    arg2 = &temp2;
+    if ((items < 1) || (items > 1)) {
+      SWIG_croak("Usage: nvmlDeviceGetMaxPcieLinkWidth(device);");
+    }
+    {
+      // arg1 = convert(ST(0))
+      if ((SWIG_ConvertPtr(ST(0),(void **) &arg1, SWIGTYPE_p_nvmlDevice_st,0)) == -1)
+      {
+        arg1 = NULL;
+      }
+    }
+    result = (nvmlReturn_t)nvmlDeviceGetMaxPcieLinkWidth(arg1,arg2);
+    ST(argvi) = SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(result)); argvi++ ;
+    if (SWIG_IsTmpObj(res2)) {
+      if (argvi >= items) EXTEND(sp,1);  ST(argvi) = SWIG_From_unsigned_SS_int  SWIG_PERL_CALL_ARGS_1((*arg2)); argvi++  ;
+    } else {
+      int new_flags = SWIG_IsNewObj(res2) ? (SWIG_POINTER_OWN | 0) : 0;
+      if (argvi >= items) EXTEND(sp,1);  ST(argvi) = SWIG_NewPointerObj((void*)(arg2), SWIGTYPE_p_unsigned_int, new_flags); argvi++  ;
+    }
+    
+    
+    XSRETURN(argvi);
+  fail:
+    
+    
+    SWIG_croak_null();
+  }
+}
+
+
+XS(_wrap_nvmlDeviceGetCurrPcieLinkGeneration) {
+  {
+    nvmlDevice_t arg1 = (nvmlDevice_t) 0 ;
+    unsigned int *arg2 = (unsigned int *) 0 ;
+    unsigned int temp2 ;
+    int res2 = SWIG_TMPOBJ ;
+    int argvi = 0;
+    nvmlReturn_t result;
+    dXSARGS;
+    
+    arg2 = &temp2;
+    if ((items < 1) || (items > 1)) {
+      SWIG_croak("Usage: nvmlDeviceGetCurrPcieLinkGeneration(device);");
+    }
+    {
+      // arg1 = convert(ST(0))
+      if ((SWIG_ConvertPtr(ST(0),(void **) &arg1, SWIGTYPE_p_nvmlDevice_st,0)) == -1)
+      {
+        arg1 = NULL;
+      }
+    }
+    result = (nvmlReturn_t)nvmlDeviceGetCurrPcieLinkGeneration(arg1,arg2);
+    ST(argvi) = SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(result)); argvi++ ;
+    if (SWIG_IsTmpObj(res2)) {
+      if (argvi >= items) EXTEND(sp,1);  ST(argvi) = SWIG_From_unsigned_SS_int  SWIG_PERL_CALL_ARGS_1((*arg2)); argvi++  ;
+    } else {
+      int new_flags = SWIG_IsNewObj(res2) ? (SWIG_POINTER_OWN | 0) : 0;
+      if (argvi >= items) EXTEND(sp,1);  ST(argvi) = SWIG_NewPointerObj((void*)(arg2), SWIGTYPE_p_unsigned_int, new_flags); argvi++  ;
+    }
+    
+    
+    XSRETURN(argvi);
+  fail:
+    
+    
+    SWIG_croak_null();
+  }
+}
+
+
+XS(_wrap_nvmlDeviceGetCurrPcieLinkWidth) {
+  {
+    nvmlDevice_t arg1 = (nvmlDevice_t) 0 ;
+    unsigned int *arg2 = (unsigned int *) 0 ;
+    unsigned int temp2 ;
+    int res2 = SWIG_TMPOBJ ;
+    int argvi = 0;
+    nvmlReturn_t result;
+    dXSARGS;
+    
+    arg2 = &temp2;
+    if ((items < 1) || (items > 1)) {
+      SWIG_croak("Usage: nvmlDeviceGetCurrPcieLinkWidth(device);");
+    }
+    {
+      // arg1 = convert(ST(0))
+      if ((SWIG_ConvertPtr(ST(0),(void **) &arg1, SWIGTYPE_p_nvmlDevice_st,0)) == -1)
+      {
+        arg1 = NULL;
+      }
+    }
+    result = (nvmlReturn_t)nvmlDeviceGetCurrPcieLinkWidth(arg1,arg2);
+    ST(argvi) = SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(result)); argvi++ ;
+    if (SWIG_IsTmpObj(res2)) {
+      if (argvi >= items) EXTEND(sp,1);  ST(argvi) = SWIG_From_unsigned_SS_int  SWIG_PERL_CALL_ARGS_1((*arg2)); argvi++  ;
+    } else {
+      int new_flags = SWIG_IsNewObj(res2) ? (SWIG_POINTER_OWN | 0) : 0;
+      if (argvi >= items) EXTEND(sp,1);  ST(argvi) = SWIG_NewPointerObj((void*)(arg2), SWIGTYPE_p_unsigned_int, new_flags); argvi++  ;
+    }
     
     
     XSRETURN(argvi);
@@ -7298,6 +7504,56 @@ XS(_wrap_nvmlDeviceGetComputeRunningProcesses) {
 }
 
 
+XS(_wrap_nvmlDeviceOnSameBoard) {
+  {
+    nvmlDevice_t arg1 = (nvmlDevice_t) 0 ;
+    nvmlDevice_t arg2 = (nvmlDevice_t) 0 ;
+    int *arg3 = (int *) 0 ;
+    int temp3 ;
+    int res3 = SWIG_TMPOBJ ;
+    int argvi = 0;
+    nvmlReturn_t result;
+    dXSARGS;
+    
+    arg3 = &temp3;
+    if ((items < 2) || (items > 2)) {
+      SWIG_croak("Usage: nvmlDeviceOnSameBoard(device1,device2);");
+    }
+    {
+      // arg1 = convert(ST(0))
+      if ((SWIG_ConvertPtr(ST(0),(void **) &arg1, SWIGTYPE_p_nvmlDevice_st,0)) == -1)
+      {
+        arg1 = NULL;
+      }
+    }
+    {
+      // arg2 = convert(ST(1))
+      if ((SWIG_ConvertPtr(ST(1),(void **) &arg2, SWIGTYPE_p_nvmlDevice_st,0)) == -1)
+      {
+        arg2 = NULL;
+      }
+    }
+    result = (nvmlReturn_t)nvmlDeviceOnSameBoard(arg1,arg2,arg3);
+    ST(argvi) = SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(result)); argvi++ ;
+    if (SWIG_IsTmpObj(res3)) {
+      if (argvi >= items) EXTEND(sp,1);  ST(argvi) = SWIG_From_int  SWIG_PERL_CALL_ARGS_1((*arg3)); argvi++  ;
+    } else {
+      int new_flags = SWIG_IsNewObj(res3) ? (SWIG_POINTER_OWN | 0) : 0;
+      if (argvi >= items) EXTEND(sp,1);  ST(argvi) = SWIG_NewPointerObj((void*)(arg3), SWIGTYPE_p_int, new_flags); argvi++  ;
+    }
+    
+    
+    
+    XSRETURN(argvi);
+  fail:
+    
+    
+    
+    SWIG_croak_null();
+  }
+}
+
+
 XS(_wrap_nvmlUnitSetLedState) {
   {
     nvmlUnit_t arg1 = (nvmlUnit_t) 0 ;
@@ -8090,6 +8346,7 @@ XS(_wrap__getProcessByIndex) {
 /* -------- TYPE CONVERSION AND EQUIVALENCE RULES (BEGIN) -------- */
 
 static swig_type_info _swigt__p_char = {"_p_char", "char *", 0, 0, (void*)0, 0};
+static swig_type_info _swigt__p_int = {"_p_int", "int *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_nvmlClockType_enum = {"_p_nvmlClockType_enum", "nvmlClockType_t *|enum nvmlClockType_enum *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_nvmlDevice_st = {"_p_nvmlDevice_st", "nvmlDevice_t|struct nvmlDevice_st *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_nvmlEccBitType_enum = {"_p_nvmlEccBitType_enum", "nvmlEccBitType_t *|enum nvmlEccBitType_enum *", 0, 0, (void*)0, 0};
@@ -8121,6 +8378,7 @@ static swig_type_info _swigt__p_unsigned_long_long = {"_p_unsigned_long_long", "
 
 static swig_type_info *swig_type_initial[] = {
   &_swigt__p_char,
+  &_swigt__p_int,
   &_swigt__p_nvmlClockType_enum,
   &_swigt__p_nvmlDevice_st,
   &_swigt__p_nvmlEccBitType_enum,
@@ -8152,6 +8410,7 @@ static swig_type_info *swig_type_initial[] = {
 };
 
 static swig_cast_info _swigc__p_char[] = {  {&_swigt__p_char, 0, 0, 0},{0, 0, 0, 0}};
+static swig_cast_info _swigc__p_int[] = {  {&_swigt__p_int, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_nvmlClockType_enum[] = {  {&_swigt__p_nvmlClockType_enum, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_nvmlDevice_st[] = {  {&_swigt__p_nvmlDevice_st, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_nvmlEccBitType_enum[] = {  {&_swigt__p_nvmlEccBitType_enum, 0, 0, 0},{0, 0, 0, 0}};
@@ -8183,6 +8442,7 @@ static swig_cast_info _swigc__p_unsigned_long_long[] = {  {&_swigt__p_unsigned_l
 
 static swig_cast_info *swig_cast_initial[] = {
   _swigc__p_char,
+  _swigc__p_int,
   _swigc__p_nvmlClockType_enum,
   _swigc__p_nvmlDevice_st,
   _swigc__p_nvmlEccBitType_enum,
@@ -8352,6 +8612,7 @@ static swig_command_info swig_commands[] = {
 {"bindingsc::nvmlDeviceGetCount", _wrap_nvmlDeviceGetCount},
 {"bindingsc::nvmlDeviceGetHandleByIndex", _wrap_nvmlDeviceGetHandleByIndex},
 {"bindingsc::nvmlDeviceGetHandleBySerial", _wrap_nvmlDeviceGetHandleBySerial},
+{"bindingsc::nvmlDeviceGetHandleByUUID", _wrap_nvmlDeviceGetHandleByUUID},
 {"bindingsc::nvmlDeviceGetHandleByPciBusId", _wrap_nvmlDeviceGetHandleByPciBusId},
 {"bindingsc::nvmlDeviceGetName", _wrap_nvmlDeviceGetName},
 {"bindingsc::nvmlDeviceGetSerial", _wrap_nvmlDeviceGetSerial},
@@ -8360,6 +8621,10 @@ static swig_command_info swig_commands[] = {
 {"bindingsc::nvmlDeviceGetDisplayMode", _wrap_nvmlDeviceGetDisplayMode},
 {"bindingsc::nvmlDeviceGetPersistenceMode", _wrap_nvmlDeviceGetPersistenceMode},
 {"bindingsc::nvmlDeviceGetPciInfo_v2", _wrap_nvmlDeviceGetPciInfo_v2},
+{"bindingsc::nvmlDeviceGetMaxPcieLinkGeneration", _wrap_nvmlDeviceGetMaxPcieLinkGeneration},
+{"bindingsc::nvmlDeviceGetMaxPcieLinkWidth", _wrap_nvmlDeviceGetMaxPcieLinkWidth},
+{"bindingsc::nvmlDeviceGetCurrPcieLinkGeneration", _wrap_nvmlDeviceGetCurrPcieLinkGeneration},
+{"bindingsc::nvmlDeviceGetCurrPcieLinkWidth", _wrap_nvmlDeviceGetCurrPcieLinkWidth},
 {"bindingsc::nvmlDeviceGetClockInfo", _wrap_nvmlDeviceGetClockInfo},
 {"bindingsc::nvmlDeviceGetMaxClockInfo", _wrap_nvmlDeviceGetMaxClockInfo},
 {"bindingsc::nvmlDeviceGetFanSpeed", _wrap_nvmlDeviceGetFanSpeed},
@@ -8378,6 +8643,7 @@ static swig_command_info swig_commands[] = {
 {"bindingsc::nvmlDeviceGetDriverModel", _wrap_nvmlDeviceGetDriverModel},
 {"bindingsc::nvmlDeviceGetVbiosVersion", _wrap_nvmlDeviceGetVbiosVersion},
 {"bindingsc::nvmlDeviceGetComputeRunningProcesses", _wrap_nvmlDeviceGetComputeRunningProcesses},
+{"bindingsc::nvmlDeviceOnSameBoard", _wrap_nvmlDeviceOnSameBoard},
 {"bindingsc::nvmlUnitSetLedState", _wrap_nvmlUnitSetLedState},
 {"bindingsc::nvmlDeviceSetPersistenceMode", _wrap_nvmlDeviceSetPersistenceMode},
 {"bindingsc::nvmlDeviceSetComputeMode", _wrap_nvmlDeviceSetComputeMode},
@@ -8695,12 +8961,12 @@ XS(SWIG_init) {
   
   /*@SWIG:/usr/share/swig/2.0.1/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "NVML_API_VERSION", TRUE | 0x2 | GV_ADDMULTI);
-    sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(2)));
+    sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(3)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
   /*@SWIG:/usr/share/swig/2.0.1/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "NVML_API_VERSION_STR", TRUE | 0x2 | GV_ADDMULTI);
-    sv_setsv(sv, SWIG_FromCharPtr("2"));
+    sv_setsv(sv, SWIG_FromCharPtr("3"));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
   /*@SWIG:/usr/share/swig/2.0.1/perl5/perltypemaps.swg,65,%set_constant@*/ do {
@@ -9020,6 +9286,41 @@ XS(SWIG_init) {
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
   SWIG_TypeClientData(SWIGTYPE_p_nvmlEventData_st, (void*) "bindings::nvmlEventData_t");
+  /*@SWIG:/usr/share/swig/2.0.1/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+    SV *sv = get_sv((char*) SWIG_prefix "NVML_DEVICE_INFOROM_VERSION_BUFFER_SIZE", TRUE | 0x2 | GV_ADDMULTI);
+    sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(16)));
+    SvREADONLY_on(sv);
+  } while(0) /*@SWIG@*/;
+  /*@SWIG:/usr/share/swig/2.0.1/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+    SV *sv = get_sv((char*) SWIG_prefix "NVML_DEVICE_UUID_BUFFER_SIZE", TRUE | 0x2 | GV_ADDMULTI);
+    sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(80)));
+    SvREADONLY_on(sv);
+  } while(0) /*@SWIG@*/;
+  /*@SWIG:/usr/share/swig/2.0.1/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+    SV *sv = get_sv((char*) SWIG_prefix "NVML_SYSTEM_DRIVER_VERSION_BUFFER_SIZE", TRUE | 0x2 | GV_ADDMULTI);
+    sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(80)));
+    SvREADONLY_on(sv);
+  } while(0) /*@SWIG@*/;
+  /*@SWIG:/usr/share/swig/2.0.1/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+    SV *sv = get_sv((char*) SWIG_prefix "NVML_SYSTEM_NVML_VERSION_BUFFER_SIZE", TRUE | 0x2 | GV_ADDMULTI);
+    sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(80)));
+    SvREADONLY_on(sv);
+  } while(0) /*@SWIG@*/;
+  /*@SWIG:/usr/share/swig/2.0.1/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+    SV *sv = get_sv((char*) SWIG_prefix "NVML_DEVICE_NAME_BUFFER_SIZE", TRUE | 0x2 | GV_ADDMULTI);
+    sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(64)));
+    SvREADONLY_on(sv);
+  } while(0) /*@SWIG@*/;
+  /*@SWIG:/usr/share/swig/2.0.1/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+    SV *sv = get_sv((char*) SWIG_prefix "NVML_DEVICE_SERIAL_BUFFER_SIZE", TRUE | 0x2 | GV_ADDMULTI);
+    sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(30)));
+    SvREADONLY_on(sv);
+  } while(0) /*@SWIG@*/;
+  /*@SWIG:/usr/share/swig/2.0.1/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+    SV *sv = get_sv((char*) SWIG_prefix "NVML_DEVICE_VBIOS_VERSION_BUFFER_SIZE", TRUE | 0x2 | GV_ADDMULTI);
+    sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(32)));
+    SvREADONLY_on(sv);
+  } while(0) /*@SWIG@*/;
   ST(0) = &PL_sv_yes;
   XSRETURN(1);
 }

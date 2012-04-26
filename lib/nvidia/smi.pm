@@ -1,5 +1,5 @@
 #####
-# Copyright (c) 2011, NVIDIA Corporation.  All rights reserved.
+# Copyright (c) 2011-2012, NVIDIA Corporation.  All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -61,6 +61,8 @@ sub handleOutput
     my $postfix = $args{postfix} || '';
     my $strArr = $args{strings};
     my $errStr = $args{errorCode};
+    my $scale = $args{scale} || 1;
+    my $format = $args{format} || '%s';
     
     my $retString = nvmlErrorString($ret);
     if ($ret == $NVML_SUCCESS)
@@ -78,6 +80,13 @@ sub handleOutput
         }
         else
         {
+            if (1 != $scale)
+            {
+                $value = $value * $scale;
+            }
+            
+            $value = sprintf($format, $value);
+
             return $prefix . $value . $postfix;
         }
     }
@@ -198,12 +207,12 @@ sub XmlDeviceQuery
         $strResult .=  "      <pci_bus_id>" . handleOutput($ret, $info->{"busId"}) . "</pci_bus_id>\n";
         $strResult .=  "      <pci_gpu_link_info>\n";
         $strResult .=  "        <pcie_gen>\n";
-        $strResult .=  "          <max_link_gen>N/A</max_link_gen>\n";
-        $strResult .=  "          <current_link_gen>N/A</current_link_gen>\n";
+        $strResult .=  "          <max_link_gen>" . handleOutput(nvmlDeviceGetMaxPcieLinkGeneration($handle)) . "</max_link_gen>\n";
+        $strResult .=  "          <current_link_gen>" . handleOutput(nvmlDeviceGetCurrPcieLinkGeneration($handle)) . "</current_link_gen>\n";
         $strResult .=  "        </pcie_gen>\n";
         $strResult .=  "        <link_widths>\n";
-        $strResult .=  "          <max_link_width>N/A</max_link_width>\n";
-        $strResult .=  "          <current_link_width>N/A</current_link_width>\n";
+        $strResult .=  "          <max_link_width>" . handleOutput(nvmlDeviceGetMaxPcieLinkWidth($handle), postfix=>'x') . "</max_link_width>\n";
+        $strResult .=  "          <current_link_width>" . handleOutput(nvmlDeviceGetCurrPcieLinkWidth($handle), postfix=>'x') . "</current_link_width>\n";
         $strResult .=  "        </link_widths>\n";
         $strResult .=  "      </pci_gpu_link_info>\n";
         $strResult .=  "    </pci>\n";
@@ -212,9 +221,9 @@ sub XmlDeviceQuery
         
         $strResult .= "    <memory_usage>\n";
         ($ret, $info) = nvmlDeviceGetMemoryInfo($handle);
-        $strResult .= "      <total>" . handleOutput($ret, int($info->{'total'} / 1024 / 1024), postfix=>' MB') . "</total>\n";
-        $strResult .= "      <used>" . handleOutput($ret, int($info->{'used'} / 1024 / 1024), postfix=>' MB') . "</used>\n";
-        $strResult .= "      <free>" . handleOutput($ret, int($info->{'free'} / 1024 / 1024), postfix=>' MB') . "</free>\n";
+        $strResult .= "      <total>" . handleOutput($ret, int($info->{'total'}), scale=>(1 / 1024 / 1024), format=>'%d', postfix=>' MB') . "</total>\n";
+        $strResult .= "      <used>" . handleOutput($ret, int($info->{'used'}), scale=>(1 / 1024 / 1024), format=>'%d', postfix=>' MB') . "</used>\n";
+        $strResult .= "      <free>" . handleOutput($ret, int($info->{'free'}), scale=>(1 / 1024 / 1024), format=>'%d', postfix=>' MB') . "</free>\n";
         $strResult .= "    </memory_usage>\n";
 
         ($ret, $mode) = nvmlDeviceGetComputeMode($handle);
@@ -265,8 +274,8 @@ sub XmlDeviceQuery
         $strResult .= "    <power_readings>\n";
         $strResult .= "      <power_state>" . handleOutput(nvmlDeviceGetPowerState($handle), prefix=>'P') . "</power_state>\n";
         $strResult .= "      <power_management>" . handleOutput(nvmlDeviceGetPowerManagementMode($handle), strings=>\@supportedStr) . "</power_management>\n";
-        $strResult .= "      <power_draw>" . handleOutput(nvmlDeviceGetPowerManagementLimit($handle)) . "</power_draw>\n";
-        $strResult .= "      <power_limit>" . handleOutput(nvmlDeviceGetPowerUsage($handle)) . "</power_limit>\n";
+        $strResult .= "      <power_draw>" . handleOutput(nvmlDeviceGetPowerUsage($handle), scale=>(1 / 1000), postfix=>' W', format=>'%.2f') . "</power_draw>\n";
+        $strResult .= "      <power_limit>" . handleOutput(nvmlDeviceGetPowerManagementLimit($handle), scale=>(1 / 1000), postfix=>' W', format=>'%d') . "</power_limit>\n";
         $strResult .= "    </power_readings>\n";
 
         $strResult .= "    <clocks>\n";

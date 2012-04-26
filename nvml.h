@@ -1,5 +1,5 @@
 /*
- * Copyright 1993-2010 NVIDIA Corporation.  All rights reserved.
+ * Copyright 1993-2012 NVIDIA Corporation.  All rights reserved.
  *
  * NOTICE TO USER:   
  *
@@ -83,39 +83,11 @@ The NVML API is divided into five categories:
 
 List of changes can be found in the \ref Changelog
 
-\htmlonly
-<div width=100% align="center">
-<p>
-<hr size="1">
-<p>
-<h2>Device Feature Matrix</h2>
-<p>
-<div align="center">This chart shows which features are available for each GPU product.<br> 
-An updated version of the board's infoROM may be required for some features.</div>
-<p>
-\endhtmlonly
-\htmlinclude device_features.html
-\htmlonly
-<p>
-<br>
-<hr size="1">
-<p>
-<h2>Unit Feature Matrix</h2>
-<p>
-<div align="center">This chart shows which unit-level features are available for each S-class product.<br>
-All GPUs within each S-class product also provide the information listed in the Device chart above.</div>
-<p>
-\endhtmlonly
-\htmlinclude unit_features.html
-\htmlonly
-<p>
-</div>
-\endhtmlonly
 \latexonly
 \section{Feature Matrix}
 \endlatexonly
 \image latex FeatureMatrix_Units.png "This chart shows which unit-level features are available for each S-class product. All GPUs within each S-class product also provide the information listed in the Device chart below." width=10cm
-\image latex FeatureMatrix_Fermi.png "This chart shows which features are available for each Fermi GPU product." width=15cm
+\image latex FeatureMatrix_Fermi.png "This chart shows which features are available for each Fermi and Kepler architecture GPU product." width=15cm
 \image latex FeatureMatrix_QuadroAndT10.png "This chart shows which features are available for each Quadro and T10 GPU product." height=22cm
 */
 
@@ -142,8 +114,8 @@ extern "C" {
 /**
  * NVML API versioning support
  */
-#define NVML_API_VERSION            2
-#define NVML_API_VERSION_STR        "2"
+#define NVML_API_VERSION            3
+#define NVML_API_VERSION_STR        "3"
 #define nvmlDeviceGetPciInfo        nvmlDeviceGetPciInfo_v2
 
 /***************************************************************************************************/
@@ -430,7 +402,7 @@ typedef struct nvmlUnitInfo_st
  * Power usage information for an S-class unit.
  * The power supply state is a human readable string that equals "Normal" or contains
  * a combination of "Abnormal" plus one or more of the following:
- *
+ *    
  *    - High voltage
  *    - Fan failure
  *    - Heatsink temperature
@@ -551,7 +523,7 @@ typedef struct nvmlEventData_st
  *         - \ref NVML_ERROR_INSUFFICIENT_POWER  if any devices have improperly attached external power cables
  *         - \ref NVML_ERROR_UNKNOWN             on any unexpected error
  */
-nvmlReturn_t DECLDIR nvmlInit();
+nvmlReturn_t DECLDIR nvmlInit(void);
 
 /**
  * Shut down NVML by releasing all GPU resources previously allocated with \ref nvmlInit().
@@ -568,7 +540,7 @@ nvmlReturn_t DECLDIR nvmlInit();
  *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
  *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
  */
-nvmlReturn_t DECLDIR nvmlShutdown();
+nvmlReturn_t DECLDIR nvmlShutdown(void);
 
 /** @} */
 
@@ -592,6 +564,50 @@ nvmlReturn_t DECLDIR nvmlShutdown();
 const DECLDIR char* nvmlErrorString(nvmlReturn_t result);
 /** @} */
 
+
+/***************************************************************************************************/
+/** @defgroup nvmlConstants Constants
+ *  @{
+ */
+/***************************************************************************************************/
+
+/**
+ * Buffer size guaranteed to be large enough for \ref nvmlDeviceGetInforomVersion
+ */
+#define NVML_DEVICE_INFOROM_VERSION_BUFFER_SIZE       16
+
+/**
+ * Buffer size guaranteed to be large enough for \ref nvmlDeviceGetUUID
+ */
+#define NVML_DEVICE_UUID_BUFFER_SIZE                  80
+
+/**
+ * Buffer size guaranteed to be large enough for \ref nvmlSystemGetDriverVersion
+ */
+#define NVML_SYSTEM_DRIVER_VERSION_BUFFER_SIZE        80
+
+/**
+ * Buffer size guaranteed to be large enough for \ref nvmlSystemGetNVMLVersion
+ */
+#define NVML_SYSTEM_NVML_VERSION_BUFFER_SIZE          80
+
+/**
+ * Buffer size guaranteed to be large enough for \ref nvmlDeviceGetName
+ */
+#define NVML_DEVICE_NAME_BUFFER_SIZE                  64
+
+/**
+ * Buffer size guaranteed to be large enough for \ref nvmlDeviceGetSerial
+ */
+#define NVML_DEVICE_SERIAL_BUFFER_SIZE                30
+
+/**
+ * Buffer size guaranteed to be large enough for \ref nvmlDeviceGetVbiosVersion
+ */
+#define NVML_DEVICE_VBIOS_VERSION_BUFFER_SIZE         32
+
+/** @} */
+
 /***************************************************************************************************/
 /** @defgroup nvmlSystemQueries System Queries
  * This chapter describes the queries that NVML can perform against the local system. These queries
@@ -606,7 +622,7 @@ const DECLDIR char* nvmlErrorString(nvmlReturn_t result);
  * For all products.
  *
  * The version identifier is an alphanumeric string.  It will not exceed 80 characters in length
- * (including the NULL terminator).
+ * (including the NULL terminator).  See \ref nvmlConstants::NVML_SYSTEM_DRIVER_VERSION_BUFFER_SIZE.
  *
  * @param version                              Reference in which to return the version identifier
  * @param length                               The maximum allowed length of the string returned in \a version
@@ -617,7 +633,7 @@ const DECLDIR char* nvmlErrorString(nvmlReturn_t result);
  *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a version is NULL
  *         - \ref NVML_ERROR_INSUFFICIENT_SIZE if \a length is too small 
  */
-nvmlReturn_t DECLDIR nvmlSystemGetDriverVersion(char* version, unsigned int length);
+nvmlReturn_t DECLDIR nvmlSystemGetDriverVersion(char *version, unsigned int length);
 
 /**
  * Retrieves the version of the NVML library.
@@ -625,7 +641,7 @@ nvmlReturn_t DECLDIR nvmlSystemGetDriverVersion(char* version, unsigned int leng
  * For all products.
  *
  * The version identifier is an alphanumeric string.  It will not exceed 80 characters in length
- * (including the NULL terminator).
+ * (including the NULL terminator).  See \ref nvmlConstants::NVML_SYSTEM_NVML_VERSION_BUFFER_SIZE.
  *
  * @param version                              Reference in which to return the version identifier
  * @param length                               The maximum allowed length of the string returned in \a version
@@ -635,7 +651,7 @@ nvmlReturn_t DECLDIR nvmlSystemGetDriverVersion(char* version, unsigned int leng
  *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a version is NULL
  *         - \ref NVML_ERROR_INSUFFICIENT_SIZE if \a length is too small 
  */
-nvmlReturn_t DECLDIR nvmlSystemGetNVMLVersion(char* version, unsigned int length);
+nvmlReturn_t DECLDIR nvmlSystemGetNVMLVersion(char *version, unsigned int length);
 
 /**
  * Gets name of the process with provided process id
@@ -898,10 +914,14 @@ nvmlReturn_t DECLDIR nvmlDeviceGetHandleByIndex(unsigned int index, nvmlDevice_t
 /**
  * Acquire the handle for a particular device, based on its board serial number.
  *
- * For Tesla &tm; and Quadro &reg; products from the Fermi family.
+ * For all products.
  *
  * This number corresponds to the value printed directly on the board, and to the value returned by
  *   \ref nvmlDeviceGetSerial().
+ *
+ * @deprecated Since more than one GPU can exist on a single board this function is deprecated in favor 
+ *             of \ref nvmlDeviceGetHandleByUUID.
+ *             For dual GPU boards this function will return NVML_ERROR_INVALID_ARGUMENT.
  *
  * @param serial                               The board serial number of the target GPU
  * @param device                               Reference in which to return the device handle
@@ -909,11 +929,34 @@ nvmlReturn_t DECLDIR nvmlDeviceGetHandleByIndex(unsigned int index, nvmlDevice_t
  * @return 
  *         - \ref NVML_SUCCESS                 if \a device has been set
  *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
- *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a serial is invalid or \a device is NULL
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a serial is invalid, \a device is NULL or more than one
+ *                                             device has the same serial (dual GPU boards)
  *         - \ref NVML_ERROR_NOT_FOUND         if \a serial does not match a valid device on the system
  *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
+ *
+ * @see nvmlDeviceGetSerial
+ * @see nvmlDeviceGetHandleByUUID
  */
-nvmlReturn_t DECLDIR nvmlDeviceGetHandleBySerial(char *serial, nvmlDevice_t *device);
+nvmlReturn_t DECLDIR nvmlDeviceGetHandleBySerial(const char *serial, nvmlDevice_t *device);
+
+/**
+ * Acquire the handle for a particular device, based on its globally unique immutable UUID associated with each device.
+ *
+ * For all products.
+ *
+ * @param uuid                                 The UUID of the target GPU
+ * @param device                               Reference in which to return the device handle
+ * 
+ * @return 
+ *         - \ref NVML_SUCCESS                 if \a device has been set
+ *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a uuid is invalid or \a device is null
+ *         - \ref NVML_ERROR_NOT_FOUND         if \a uuid does not match a valid device on the system
+ *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
+ *
+ * @see nvmlDeviceGetUUID
+ */
+nvmlReturn_t DECLDIR nvmlDeviceGetHandleByUUID(const char *uuid, nvmlDevice_t *device);
 
 /**
  * Acquire the handle for a particular device, based on its PCI bus id.
@@ -932,7 +975,7 @@ nvmlReturn_t DECLDIR nvmlDeviceGetHandleBySerial(char *serial, nvmlDevice_t *dev
  *         - \ref NVML_ERROR_NOT_FOUND         if \a pciBusId does not match a valid device on the system
  *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
  */
-nvmlReturn_t DECLDIR nvmlDeviceGetHandleByPciBusId(char *pciBusId, nvmlDevice_t *device);
+nvmlReturn_t DECLDIR nvmlDeviceGetHandleByPciBusId(const char *pciBusId, nvmlDevice_t *device);
 
 /**
  * Retrieves the name of this device. 
@@ -940,7 +983,8 @@ nvmlReturn_t DECLDIR nvmlDeviceGetHandleByPciBusId(char *pciBusId, nvmlDevice_t 
  * For all products.
  *
  * The name is an alphanumeric string that denotes a particular product, e.g. Tesla &tm; C2070. It will not
- * exceed 64 characters in length (including the NULL terminator).
+ * exceed 64 characters in length (including the NULL terminator).  See \ref
+ * nvmlConstants::NVML_DEVICE_NAME_BUFFER_SIZE.
  *
  * @param device                               The identifier of the target device
  * @param name                                 Reference in which to return the product name
@@ -952,15 +996,16 @@ nvmlReturn_t DECLDIR nvmlDeviceGetHandleByPciBusId(char *pciBusId, nvmlDevice_t 
  *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device is invalid, or \a name is NULL
  *         - \ref NVML_ERROR_INSUFFICIENT_SIZE if \a length is too small
  */
-nvmlReturn_t DECLDIR nvmlDeviceGetName(nvmlDevice_t device, char* name, unsigned int length);
+nvmlReturn_t DECLDIR nvmlDeviceGetName(nvmlDevice_t device, char *name, unsigned int length);
 
 /**
- * Retrieves the globally unique serial number associated with this device.
+ * Retrieves the globally unique board serial number associated with this device's board.
  *
- * For Tesla &tm; and Quadro &reg; products from the Fermi family.
+ * For Tesla &tm; and Quadro &reg; products from the Fermi and Kepler families.
  *
  * The serial number is an alphanumeric string that will not exceed 30 characters (including the NULL terminator).
- * This number matches the serial number tag that is physically attached to the board.
+ * This number matches the serial number tag that is physically attached to the board.  See \ref
+ * nvmlConstants::NVML_DEVICE_SERIAL_BUFFER_SIZE.
  *
  * @param device                               The identifier of the target device
  * @param serial                               Reference in which to return the board/module serial number
@@ -973,16 +1018,17 @@ nvmlReturn_t DECLDIR nvmlDeviceGetName(nvmlDevice_t device, char* name, unsigned
  *         - \ref NVML_ERROR_INSUFFICIENT_SIZE if \a length is too small
  *         - \ref NVML_ERROR_NOT_SUPPORTED     if the device does not support this feature
  */
-nvmlReturn_t DECLDIR nvmlDeviceGetSerial(nvmlDevice_t device, char* serial, unsigned int length);
+nvmlReturn_t DECLDIR nvmlDeviceGetSerial(nvmlDevice_t device, char *serial, unsigned int length);
 
 /**
- * Retrieves the UUID associated with this device, as a 5 part hexadecimal string.
+ * Retrieves the globally unique immutable UUID associated with this device, as a 5 part hexadecimal string,
+ * that augments the immutable, board serial identifier.
  *
- * For Tesla &tm; products, and Quadro &reg; products from the Fermi family.
+ * For Tesla &tm; and Quadro &reg; products from the Fermi and Kepler families.
  *
  * The UUID is a globally unique identifier. It is the only available identifier for pre-Fermi-architecture products.
  * It does NOT correspond to any identifier printed on the board.  It will not exceed 80 characters in length
- * (including the NULL terminator).
+ * (including the NULL terminator).  See \ref nvmlConstants::NVML_DEVICE_UUID_BUFFER_SIZE.
  *
  * @param device                               The identifier of the target device
  * @param uuid                                 Reference in which to return the GPU UUID
@@ -1001,11 +1047,12 @@ nvmlReturn_t DECLDIR nvmlDeviceGetUUID(nvmlDevice_t device, char *uuid, unsigned
 /**
  * Retrieves the version information for the device's infoROM.
  *
- * For Tesla &tm; and Quadro &reg; products from the Fermi family.
+ * For Tesla &tm; and Quadro &reg; products from the Fermi and Kepler families.
  *
  * Fermi and higher parts have non-volatile on-board memory for persisting device info, such as aggregate 
  * ECC counts. The version of the data structures in this memory may change from time to time. It will not
- * exceed 16 characters in length (including the NULL terminator). 
+ * exceed 16 characters in length (including the NULL terminator).  See \ref
+ * nvmlConstants::NVML_DEVICE_INFOROM_VERSION_BUFFER_SIZE.
  *
  * See \ref nvmlInforomObject_t for details on the available infoROM objects.
  *
@@ -1027,7 +1074,7 @@ nvmlReturn_t DECLDIR nvmlDeviceGetInforomVersion(nvmlDevice_t device, nvmlInforo
 /**
  * Retrieves the display mode for the device.
  *
- * For Tesla &tm; products, and Quadro &reg; products from the Fermi family.
+ * For Tesla &tm; and Quadro &reg; products from the Fermi and Kepler families.
  *
  * This method indicates whether a physical display is currently connected to the device.
  *
@@ -1088,9 +1135,83 @@ nvmlReturn_t DECLDIR nvmlDeviceGetPersistenceMode(nvmlDevice_t device, nvmlEnabl
 nvmlReturn_t DECLDIR nvmlDeviceGetPciInfo(nvmlDevice_t device, nvmlPciInfo_t *pci);
 
 /**
+ * Retrieves the maximum PCIe link generation possible with this device and system
+ *
+ * I.E. for a generation 2 PCIe device attached to a generation 1 PCIe bus the max link generation this function will
+ * report is generation 1.
+ * 
+ * For Tesla &tm; and Quadro &reg; products from the Fermi and Kepler families.
+ * 
+ * @param device                               The identifier of the target device
+ * @param maxLinkGen                           Reference in which to return the max PCIe link generation
+ * 
+ * @return 
+ *         - \ref NVML_SUCCESS                 if \a maxLinkGen has been populated
+ *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device is invalid or \a maxLinkGen is null
+ *         - \ref NVML_ERROR_NOT_SUPPORTED     if PCIe link information is not available
+ *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
+ */
+nvmlReturn_t DECLDIR nvmlDeviceGetMaxPcieLinkGeneration(nvmlDevice_t device, unsigned int *maxLinkGen);
+
+/**
+ * Retrieves the maximum PCIe link width possible with this device and system
+ *
+ * I.E. for a device with a 16x PCIe bus width attached to a 8x PCIe system bus this function will report
+ * a max link width of 8.
+ * 
+ * For Tesla &tm; and Quadro &reg; products from the Fermi and Kepler families.
+ * 
+ * @param device                               The identifier of the target device
+ * @param maxLinkWidth                         Reference in which to return the max PCIe link generation
+ * 
+ * @return 
+ *         - \ref NVML_SUCCESS                 if \a maxLinkWidth has been populated
+ *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device is invalid or \a maxLinkWidth is null
+ *         - \ref NVML_ERROR_NOT_SUPPORTED     if PCIe link information is not available
+ *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
+ */
+nvmlReturn_t DECLDIR nvmlDeviceGetMaxPcieLinkWidth(nvmlDevice_t device, unsigned int *maxLinkWidth);
+
+/**
+ * Retrieves the current PCIe link generation
+ * 
+ * For Tesla &tm; and Quadro &reg; products from the Fermi and Kepler families.
+ * 
+ * @param device                               The identifier of the target device
+ * @param currLinkGen                          Reference in which to return the max PCIe link generation
+ * 
+ * @return 
+ *         - \ref NVML_SUCCESS                 if \a currLinkGen has been populated
+ *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device is invalid or \a currLinkGen is null
+ *         - \ref NVML_ERROR_NOT_SUPPORTED     if PCIe link information is not available
+ *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
+ */
+nvmlReturn_t DECLDIR nvmlDeviceGetCurrPcieLinkGeneration(nvmlDevice_t device, unsigned int *currLinkGen);
+
+/**
+ * Retrieves the current PCIe link width
+ * 
+ * For Tesla &tm; and Quadro &reg; products from the Fermi and Kepler families.
+ * 
+ * @param device                               The identifier of the target device
+ * @param currLinkWidth                        Reference in which to return the max PCIe link generation
+ * 
+ * @return 
+ *         - \ref NVML_SUCCESS                 if \a currLinkWidth has been populated
+ *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device is invalid or \a currLinkWidth is null
+ *         - \ref NVML_ERROR_NOT_SUPPORTED     if PCIe link information is not available
+ *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
+ */
+nvmlReturn_t DECLDIR nvmlDeviceGetCurrPcieLinkWidth(nvmlDevice_t device, unsigned int *currLinkWidth);
+
+/**
  * Retrieves the current clock speeds for the device.
  *
- * For Tesla &tm; products, and Quadro &reg; products from the Fermi family.
+ * For Tesla &tm; and Quadro &reg; products from the Fermi and Kepler families.
  *
  * See \ref nvmlClockType_t for details on available clock information.
  *
@@ -1110,7 +1231,7 @@ nvmlReturn_t DECLDIR nvmlDeviceGetClockInfo(nvmlDevice_t device, nvmlClockType_t
 /**
  * Retrieves the maximum clock speeds for the device.
  *
- * For Tesla &tm; products, and Quadro &reg; products from the Fermi family.
+ * For Tesla &tm; and Quadro &reg; products from the Fermi and Kepler families.
  *
  * See \ref nvmlClockType_t for details on available clock information.
  *
@@ -1169,7 +1290,7 @@ nvmlReturn_t DECLDIR nvmlDeviceGetTemperature(nvmlDevice_t device, nvmlTemperatu
 /**
  * Retrieves the current performance state for the device. 
  *
- * For Tesla &tm; products, and Quadro &reg; products from the Fermi family.
+ * For Tesla &tm; and Quadro &reg; products from the Fermi and Kepler families.
  *
  * See \ref nvmlPstates_t for details on allowed performance states.
  *
@@ -1190,7 +1311,7 @@ nvmlReturn_t DECLDIR nvmlDeviceGetPerformanceState(nvmlDevice_t device, nvmlPsta
  *
  * Retrieve the current power state for the device. 
  *
- * For Tesla &tm; products, and Quadro &reg; products from the Fermi family.
+ * For Tesla &tm; and Quadro &reg; products from the Fermi and Kepler families.
  *
  * See \ref nvmlPstates_t for details on allowed power states.
  *
@@ -1210,7 +1331,10 @@ nvmlReturn_t DECLDIR nvmlDeviceGetPowerState(nvmlDevice_t device, nvmlPstates_t 
  * Retrieves the power management mode associated with this device.
  *
  * For "GF11x" Tesla &tm; and Quadro &reg; products from the Fermi family.
- * Requires \a NVML_INFOROM_POWER version 3.0 or higher.
+ *     - Requires \a NVML_INFOROM_POWER version 3.0 or higher.
+ *
+ * For Tesla &tm; and Quadro &reg; products from the Kepler family.
+ *     - Does not require \a NVML_INFOROM_POWER object.
  *
  * This flag indicates whether any power management algorithm is currently active on the device. An 
  * enabled state does not necessarily mean the device is being actively throttled -- only that 
@@ -1234,7 +1358,10 @@ nvmlReturn_t DECLDIR nvmlDeviceGetPowerManagementMode(nvmlDevice_t device, nvmlE
  * Retrieves the power management limit associated with this device, in milliwatts.
  *
  * For "GF11x" Tesla &tm; and Quadro &reg; products from the Fermi family.
- * Requires \a NVML_INFOROM_POWER version 3.0 or higher.
+ *     - Requires \a NVML_INFOROM_POWER version 3.0 or higher.
+ *
+ * For Tesla &tm; and Quadro &reg; products from the Kepler family.
+ *     - Does not require \a NVML_INFOROM_POWER object.
  *
  * The power limit defines the upper boundary for the card's power draw. If
  * the card's total power draw reaches this limit the power management algorithm kicks in.
@@ -1259,7 +1386,10 @@ nvmlReturn_t DECLDIR nvmlDeviceGetPowerManagementLimit(nvmlDevice_t device, unsi
  * board, including GPU, memory, etc.
  *
  * For "GF11x" Tesla &tm; and Quadro &reg; products from the Fermi family.
- * Requires \a NVML_INFOROM_POWER version 3.0 or higher.
+ *     - Requires \a NVML_INFOROM_POWER version 3.0 or higher.
+ *
+ * For Tesla &tm; and Quadro &reg; products from the Kepler family.
+ *     - Does not require \a NVML_INFOROM_POWER object.
  *
  * The reading is accurate to within a range of +/- 5 watts. It is only available if power management mode
  * is supported. See \ref nvmlDeviceGetPowerManagementMode.
@@ -1324,7 +1454,7 @@ nvmlReturn_t DECLDIR nvmlDeviceGetComputeMode(nvmlDevice_t device, nvmlComputeMo
 /**
  * Retrieves the current and pending ECC modes for the device.
  *
- * For Tesla &tm; and Quadro &reg; products from the Fermi family.
+ * For Tesla &tm; and Quadro &reg; products from the Fermi and Kepler families.
  * Requires \a NVML_INFOROM_ECC version 1.0 or higher.
  *
  * Changing ECC modes requires a reboot. The "pending" ECC mode refers to the target mode following
@@ -1350,7 +1480,7 @@ nvmlReturn_t DECLDIR nvmlDeviceGetEccMode(nvmlDevice_t device, nvmlEnableState_t
 /**
  * Retrieves the total ECC error counts for the device.
  *
- * For Tesla &tm; and Quadro &reg; products from the Fermi family.
+ * For Tesla &tm; and Quadro &reg; products from the Fermi and Kepler families.
  * Requires \a NVML_INFOROM_ECC version 1.0 or higher.
  * Requires ECC Mode to be enabled.
  *
@@ -1379,7 +1509,7 @@ nvmlReturn_t DECLDIR nvmlDeviceGetTotalEccErrors(nvmlDevice_t device, nvmlEccBit
 /**
  * Retrieves the detailed ECC error counts for the device.
  *
- * For Tesla &tm; and Quadro &reg; products from the Fermi family.
+ * For Tesla &tm; and Quadro &reg; products from the Fermi and Kepler families.
  * Requires \a NVML_INFOROM_ECC version 2.0 or higher to report aggregate location-based ECC counts.
  * Requires \a NVML_INFOROM_ECC version 1.0 or higher to report all other ECC counts.
  * Requires ECC Mode to be enabled.
@@ -1409,7 +1539,7 @@ nvmlReturn_t DECLDIR nvmlDeviceGetDetailedEccErrors(nvmlDevice_t device, nvmlEcc
 /**
  * Retrieves the current utilization rates for the device's major subsystems.
  *
- * For Tesla &tm; products, and Quadro &reg; products from the Fermi family.
+ * For Tesla &tm; and Quadro &reg; products from the Fermi and Kepler families.
  *
  * See \ref nvmlUtilization_t for details on available utilization rates.
  *
@@ -1428,7 +1558,7 @@ nvmlReturn_t DECLDIR nvmlDeviceGetUtilizationRates(nvmlDevice_t device, nvmlUtil
 /**
  * Retrieves the current and pending driver model for the device.
  *
- * For Tesla &tm; products, and Quadro &reg; products from the Fermi family.
+ * For Tesla &tm; and Quadro &reg; products from the Fermi and Kepler families.
  * For windows only.
  *
  * On Windows platforms the device driver can run in either WDDM or WDM (TCC) mode. If a display is attached
@@ -1457,7 +1587,7 @@ nvmlReturn_t DECLDIR nvmlDeviceGetDriverModel(nvmlDevice_t device, nvmlDriverMod
  * For all products.
  *
  * The VBIOS version may change from time to time. It will not exceed 32 characters in length 
- * (including the NULL terminator). 
+ * (including the NULL terminator).  See \ref nvmlConstants::NVML_DEVICE_VBIOS_VERSION_BUFFER_SIZE.
  *
  * @param device                               The identifier of the target device
  * @param version                              Reference to which to return the VBIOS version
@@ -1470,15 +1600,19 @@ nvmlReturn_t DECLDIR nvmlDeviceGetDriverModel(nvmlDevice_t device, nvmlDriverMod
  *         - \ref NVML_ERROR_INSUFFICIENT_SIZE if \a length is too small 
  *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
  */
-nvmlReturn_t DECLDIR nvmlDeviceGetVbiosVersion(nvmlDevice_t device, char * version, unsigned int length);
+nvmlReturn_t DECLDIR nvmlDeviceGetVbiosVersion(nvmlDevice_t device, char *version, unsigned int length);
 
 /**
  * Get information about processes with a compute context on a device
  *
- * For Tesla &tm; and Quadro &reg; products from the Fermi family.
+ * For Tesla &tm; and Quadro &reg; products from the Fermi and Kepler families.
  *
  * This function returns information only about compute running processes (e.g. CUDA application which have
  * active context). Any graphics applications (e.g. using OpenGL, DirectX) won't be listed by this function.
+ *
+ * To query the current number of running compute processes, call this function with *infoCount = 0. The
+ * return code will be NVML_ERROR_INSUFFICIENT_SIZE, or NVML_SUCCESS if none are running. For this call
+ * \a infos is allowed to be NULL.
  *
  * Keep in mind that information returned by this call is dynamic and the number of elements might change in
  * time. Allocate more space for \a infos table in case new compute processes are spawned.
@@ -1500,6 +1634,22 @@ nvmlReturn_t DECLDIR nvmlDeviceGetVbiosVersion(nvmlDevice_t device, char * versi
  * @see \ref nvmlSystemGetProcessName
  */
 nvmlReturn_t DECLDIR nvmlDeviceGetComputeRunningProcesses(nvmlDevice_t device, unsigned int *infoCount, nvmlProcessInfo_t *infos);
+
+/**
+ * Check if the GPU devices are on the same physical board.
+ *
+ * @param device1                               The first GPU device
+ * @param device2                               The second GPU device
+ * @param onSameBoard                           Reference in which to return the status.
+ *                                              Non-zero indicates that the GPUs are on the same board.
+ *
+ * @return
+ *         - \ref NVML_SUCCESS                 when onSameBoard has been populated
+ *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a dev1, \a dev2 or \a onSameBoard are invalid
+ *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
+ */
+nvmlReturn_t DECLDIR nvmlDeviceOnSameBoard(nvmlDevice_t device1, nvmlDevice_t device2, int *onSameBoard);
 
 /** @} */
 
@@ -1616,7 +1766,7 @@ nvmlReturn_t DECLDIR nvmlDeviceSetComputeMode(nvmlDevice_t device, nvmlComputeMo
 /**
  * Set the ECC mode for the device.
  *
- * For Tesla &tm; and Quadro &reg; products from the Fermi family.
+ * For Tesla &tm; and Quadro &reg; products from the Fermi and Kepler families.
  * Requires \a NVML_INFOROM_ECC version 1.0 or higher.
  * Requires root/admin permissions.
  *
@@ -1644,7 +1794,7 @@ nvmlReturn_t DECLDIR nvmlDeviceSetEccMode(nvmlDevice_t device, nvmlEnableState_t
 /**
  * Clear the ECC error counts for the device.
  *
- * For Tesla &tm; and Quadro &reg; products from the Fermi family.
+ * For Tesla &tm; and Quadro &reg; products from the Fermi and Kepler families.
  * Requires \a NVML_INFOROM_ECC version 2.0 or higher to clear aggregate location-based ECC counts.
  * Requires \a NVML_INFOROM_ECC version 1.0 or higher to clear all other ECC counts.
  * Requires root/admin permissions.
@@ -1676,7 +1826,7 @@ nvmlReturn_t DECLDIR nvmlDeviceClearEccErrorCounts(nvmlDevice_t device, nvmlEccC
 /**
  * Set the driver model for the device.
  *
- * For Tesla &tm; products, and Quadro &reg; products from the Fermi family.
+ * For Tesla &tm; and Quadro &reg; products from the Fermi and Kepler families.
  * For windows only.
  * Requires root/admin permissions.
  *
@@ -1739,7 +1889,7 @@ nvmlReturn_t DECLDIR nvmlEventSetCreate(nvmlEventSet_t *set);
 /**
  * Starts recording of events on a specified devices and add the events to specified \ref nvmlEventSet_t
  *
- * For Tesla &tm; products, and Quadro &reg; products from the Fermi family.
+ * For Tesla &tm; and Quadro &reg; products from the Fermi and Kepler families.
  * Ecc events are available only on ECC enabled devices (see \ref nvmlDeviceGetTotalEccErrors)
  * Power capping events are available only on Power Management enabled devices (see \ref nvmlDeviceGetPowerManagementMode)
  *
@@ -1793,7 +1943,7 @@ nvmlReturn_t DECLDIR nvmlDeviceGetSupportedEventTypes(nvmlDevice_t device, unsig
 /**
  * Waits on events and delivers events
  *
- * For Tesla &tm; products, and Quadro &reg; products from the Fermi family.
+ * For Tesla &tm; and Quadro &reg; products from the Fermi and Kepler families.
  *
  * If some events are ready to be delivered at the time of the call, function returns immediately.
  * If there are no events ready to be delivered, function sleeps till event arrives 
@@ -1819,7 +1969,7 @@ nvmlReturn_t DECLDIR nvmlEventSetWait(nvmlEventSet_t set, nvmlEventData_t * data
 /**
  * Releases events in the set
  *
- * For Tesla &tm; products, and Quadro &reg; products from the Fermi family.
+ * For Tesla &tm; and Quadro &reg; products from the Fermi and Kepler families.
  *
  * @param set                                  Reference to events to be released 
  * 

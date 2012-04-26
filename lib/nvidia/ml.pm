@@ -1,5 +1,5 @@
 #####
-# Copyright (c) 2011, NVIDIA Corporation.  All rights reserved.
+# Copyright (c) 2011-2012, NVIDIA Corporation.  All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -38,7 +38,7 @@ require Exporter;
 
 our @ISA = qw(Exporter);
 
-our $VERSION = "2.285.4";
+our $VERSION = "3.295.0";
 
 our @EXPORT_OK =
     qw(
@@ -62,6 +62,7 @@ our @EXPORT_OK =
      nvmlDeviceGetHandleByIndex
      nvmlDeviceGetHandleBySerial
      nvmlDeviceGetHandleByPciBusId
+     nvmlDeviceGetHandleByUUID
      nvmlDeviceGetName
      nvmlDeviceGetSerial
      nvmlDeviceGetUUID
@@ -98,6 +99,14 @@ our @EXPORT_OK =
      nvmlDeviceGetSupportedEventTypes
      nvmlEventSetWait
      nvmlEventSetFree
+     nvmlEventDataGetPerformanceState
+     nvmlEventDataGetXidCriticalError
+     nvmlEventDataGetEccErrorCount
+     nvmlDeviceOnSameBoard
+     nvmlDeviceGetMaxPcieLinkGeneration
+     nvmlDeviceGetCurrPcieLinkGeneration
+     nvmlDeviceGetMaxPcieLinkWidth
+     nvmlDeviceGetCurrPcieLinkWidth
      
      $NVML_FEATURE_DISABLED
      $NVML_FEATURE_ENABLED
@@ -159,6 +168,13 @@ our @EXPORT_OK =
      $nvmlEventTypeXidCriticalError
      $nvmlEventTypeNone
      $nvmlEventTypeAll
+     $NVML_DEVICE_INFOROM_VERSION_BUFFER_SIZE
+     $NVML_DEVICE_UUID_BUFFER_SIZE
+     $NVML_SYSTEM_DRIVER_VERSION_BUFFER_SIZE
+     $NVML_SYSTEM_NVML_VERSION_BUFFER_SIZE
+     $NVML_DEVICE_NAME_BUFFER_SIZE
+     $NVML_DEVICE_SERIAL_BUFFER_SIZE
+     $NVML_DEVICE_VBIOS_VERSION_BUFFER_SIZE
     );
 
 # use nvidia::ml qw(:all);
@@ -185,8 +201,7 @@ foreach my $export (@EXPORT_OK)
 
 sub nvmlSystemGetDriverVersion
 {
-    # NVML API 1.0 requires a buffer >80
-    return nvidia::ml::bindings::nvmlSystemGetDriverVersion(81);
+    return nvidia::ml::bindings::nvmlSystemGetDriverVersion($nvidia::ml::bindings::NVML_SYSTEM_DRIVER_VERSION_BUFFER_SIZE);
 }
 
 # Added to API
@@ -247,7 +262,7 @@ sub nvmlSystemGetProcessName
 
 sub nvmlSystemGetNVMLVersion
 {
-    return nvidia::ml::bindings::nvmlSystemGetNVMLVersion(128);
+    return nvidia::ml::bindings::nvmlSystemGetNVMLVersion($nvidia::ml::bindings::NVML_SYSTEM_NVML_VERSION_BUFFER_SIZE);
 }
 
 *nvmlUnitGetCount            = *nvidia::ml::bindings::nvmlUnitGetCount;
@@ -389,27 +404,28 @@ sub nvmlUnitGetDevices
 *nvmlDeviceGetHandleByIndex  = *nvidia::ml::bindings::nvmlDeviceGetHandleByIndex;
 *nvmlDeviceGetHandleBySerial = *nvidia::ml::bindings::nvmlDeviceGetHandleBySerial;
 *nvmlDeviceGetHandleByPciBusId = *nvidia::ml::bindings::nvmlDeviceGetHandleByPciBusId;
+*nvmlDeviceGetHandleByUUID   = *nvidia::ml::bindings::nvmlDeviceGetHandleByUUID;
 
 sub nvmlDeviceGetName
 {
     my $handle = shift;
-    return nvidia::ml::bindings::nvmlDeviceGetName($handle, 64);
+    return nvidia::ml::bindings::nvmlDeviceGetName($handle, $nvidia::ml::bindings::NVML_DEVICE_NAME_BUFFER_SIZE);
 }
 sub nvmlDeviceGetSerial
 {
     my $handle = shift;
-    return nvidia::ml::bindings::nvmlDeviceGetSerial($handle, 30);
+    return nvidia::ml::bindings::nvmlDeviceGetSerial($handle, $nvidia::ml::bindings::NVML_DEVICE_SERIAL_BUFFER_SIZE);
 }
 sub nvmlDeviceGetUUID
 {
     my $handle = shift;
-    return nvidia::ml::bindings::nvmlDeviceGetUUID($handle, 80);
+    return nvidia::ml::bindings::nvmlDeviceGetUUID($handle, $nvidia::ml::bindings::NVML_DEVICE_UUID_BUFFER_SIZE);
 }
 sub nvmlDeviceGetInforomVersion
 {
     my $handle = shift;
     my $object = shift;
-    return nvidia::ml::bindings::nvmlDeviceGetInforomVersion($handle, $object, 100);
+    return nvidia::ml::bindings::nvmlDeviceGetInforomVersion($handle, $object, $nvidia::ml::bindings::NVML_DEVICE_INFOROM_VERSION_BUFFER_SIZE);
 }
 
 *nvmlDeviceGetDisplayMode     = *nvidia::ml::bindings::nvmlDeviceGetDisplayMode;
@@ -528,7 +544,7 @@ sub nvmlDeviceGetUtilizationRates
 sub nvmlDeviceGetVbiosVersion
 {
     my $handle = shift;
-    return nvidia::ml::bindings::nvmlDeviceGetVbiosVersion($handle, 32);
+    return nvidia::ml::bindings::nvmlDeviceGetVbiosVersion($handle, $nvidia::ml::bindings::NVML_DEVICE_VBIOS_VERSION_BUFFER_SIZE);
 }
 
 sub nvmlDeviceGetComputeRunningProcesses
@@ -623,7 +639,51 @@ sub nvmlEventSetWait
 
 *nvmlEventSetFree                 = *nvidia::ml::bindings::nvmlEventSetFree;
 
+# free after use
+sub ReconstructData
+{
+    my $infohashref = shift;
+    my $cdata = new nvidia::ml::bindings::nvmlEventData_t();
+    $cdata->swig_device_set($infohashref->{'device'});
+    $cdata->swig_eventType_set($infohashref->{'eventType'});
+    $cdata->swig_data_set($infohashref->{'data'});
+    return $cdata;
+}
+
+sub nvmlEventDataGetPerformanceState
+{
+    my $infohashref = shift;
+    my $cdata = ReconstructData($infohashref);
+    my ($ret, $val) = nvidia::ml::bindings::nvmlEventDataGetPerformanceState($cdata);
+    $cdata->DESTROY();
+    return ($ret, $val);
+}
+sub nvmlEventDataGetXidCriticalError
+{
+    my $infohashref = shift;
+    my $cdata = ReconstructData($infohashref);
+    my ($ret, $val) = nvidia::ml::bindings::nvmlEventDataGetXidCriticalError($cdata);
+    $cdata->DESTROY();
+    return ($ret, $val);
+}
+sub nvmlEventDataGetEccErrorCount
+{
+    my $infohashref = shift;
+    my $cdata = ReconstructData($infohashref);
+    my ($ret, $val) = nvidia::ml::bindings::nvmlEventDataGetEccErrorCount($cdata);
+    $cdata->DESTROY();
+    return ($ret, $val);
+}
+
+*nvmlDeviceOnSameBoard                  = *nvidia::ml::bindings::nvmlDeviceOnSameBoard;
+
+*nvmlDeviceGetMaxPcieLinkGeneration     = *nvidia::ml::bindings::nvmlDeviceGetMaxPcieLinkGeneration;
+*nvmlDeviceGetCurrPcieLinkGeneration    = *nvidia::ml::bindings::nvmlDeviceGetCurrPcieLinkGeneration;
+*nvmlDeviceGetMaxPcieLinkWidth          = *nvidia::ml::bindings::nvmlDeviceGetMaxPcieLinkWidth;
+*nvmlDeviceGetCurrPcieLinkWidth         = *nvidia::ml::bindings::nvmlDeviceGetCurrPcieLinkWidth;
+
 1;
+
 __END__
 
 =head1 NAME
@@ -722,7 +782,7 @@ See EXPORTS and NVML documentation.  All NVML constants and enums are exposed.
 
 =head1 COPYRIGHT
 
-Copyright (c) 2011, NVIDIA Corporation.  All rights reserved.
+Copyright (c) 2011-2012, NVIDIA Corporation.  All rights reserved.
 
 =head1 LICENSE
 
