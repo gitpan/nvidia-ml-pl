@@ -38,75 +38,87 @@ require Exporter;
 
 our @ISA = qw(Exporter);
 
-our $VERSION = "3.295.0";
+our $VERSION = "4.302.0";
 
 our @EXPORT_OK =
     qw(
-     nvmlInit
-     nvmlShutdown
+     nvmlDeviceClearEccErrorCounts
+     nvmlDeviceGetClockInfo
+     nvmlDeviceGetApplicationsClock
+     nvmlDeviceResetApplicationsClocks
+     nvmlDeviceGetComputeMode
+     nvmlDeviceGetComputeRunningProcesses
+     nvmlDeviceGetCount
+     nvmlDeviceGetCurrPcieLinkGeneration
+     nvmlDeviceGetCurrPcieLinkWidth
+     nvmlDeviceGetCurrentClocksThrottleReasons
+     nvmlDeviceGetDetailedEccErrors
+     nvmlDeviceGetDisplayMode
+     nvmlDeviceGetDriverModel
+     nvmlDeviceGetEccMode
+     nvmlDeviceGetFanSpeed
+     nvmlDeviceGetHandleByIndex
+     nvmlDeviceGetHandleByPciBusId
+     nvmlDeviceGetHandleBySerial
+     nvmlDeviceGetHandleByUUID
+     nvmlDeviceGetInforomConfigurationChecksum
+     nvmlDeviceGetInforomImageVersion
+     nvmlDeviceGetInforomVersion
+     nvmlDeviceGetMaxClockInfo
+     nvmlDeviceGetMaxPcieLinkGeneration
+     nvmlDeviceGetMaxPcieLinkWidth
+     nvmlDeviceGetMemoryInfo
+     nvmlDeviceGetName
+     nvmlDeviceGetPciInfo
+     nvmlDeviceGetPciInfo_v2
+     nvmlDeviceGetPerformanceState
+     nvmlDeviceGetPersistenceMode
+     nvmlDeviceGetPowerManagementDefaultLimit
+     nvmlDeviceGetPowerManagementLimit
+     nvmlDeviceGetPowerManagementLimitConstraints
+     nvmlDeviceGetPowerManagementMode
+     nvmlDeviceGetPowerState
+     nvmlDeviceGetPowerUsage
+     nvmlDeviceGetSerial
+     nvmlDeviceGetSupportedEventTypes
+     nvmlDeviceGetSupportedGraphicsClocks
+     nvmlDeviceGetSupportedMemoryClocks
+     nvmlDeviceGetSupportedClocksThrottleReasons
+     nvmlDeviceGetTemperature
+     nvmlDeviceGetTotalEccErrors
+     nvmlDeviceGetMemoryErrorCounter
+     nvmlDeviceGetUUID
+     nvmlDeviceGetUtilizationRates
+     nvmlDeviceGetVbiosVersion
+     nvmlDeviceOnSameBoard
+     nvmlDeviceRegisterEvents
+     nvmlDeviceSetApplicationsClocks
+     nvmlDeviceSetComputeMode
+     nvmlDeviceSetDriverModel
+     nvmlDeviceSetEccMode
+     nvmlDeviceSetPersistenceMode
+     nvmlDeviceSetPowerManagementLimit
+     nvmlDeviceValidateInforom
      nvmlErrorString
+     nvmlEventSetCreate
+     nvmlEventSetFree
+     nvmlEventSetWait
+     nvmlInit
+     nvmlInternalGetExportTable
+     nvmlShutdown
      nvmlSystemGetDriverVersion
      nvmlSystemGetHicVersion
-     nvmlSystemGetHicVersionCount
      nvmlSystemGetNVMLVersion
      nvmlSystemGetProcessName
      nvmlUnitGetCount
+     nvmlUnitGetDevices
+     nvmlUnitGetFanSpeedInfo
      nvmlUnitGetHandleByIndex
-     nvmlUnitGetUnitInfo
      nvmlUnitGetLedState
      nvmlUnitGetPsuInfo
      nvmlUnitGetTemperature
-     nvmlUnitGetFanSpeedInfo
-     nvmlUnitGetDevices
-     nvmlDeviceGetCount
-     nvmlDeviceGetHandleByIndex
-     nvmlDeviceGetHandleBySerial
-     nvmlDeviceGetHandleByPciBusId
-     nvmlDeviceGetHandleByUUID
-     nvmlDeviceGetName
-     nvmlDeviceGetSerial
-     nvmlDeviceGetUUID
-     nvmlDeviceGetInforomVersion
-     nvmlDeviceGetDisplayMode
-     nvmlDeviceGetPersistenceMode
-     nvmlDeviceGetPciInfo
-     nvmlDeviceGetClockInfo
-     nvmlDeviceGetMaxClockInfo
-     nvmlDeviceGetFanSpeed
-     nvmlDeviceGetTemperature
-     nvmlDeviceGetPowerState
-     nvmlDeviceGetPerformanceState
-     nvmlDeviceGetPowerManagementMode
-     nvmlDeviceGetPowerManagementLimit
-     nvmlDeviceGetPowerUsage
-     nvmlDeviceGetMemoryInfo
-     nvmlDeviceGetComputeMode
-     nvmlDeviceGetEccMode
-     nvmlDeviceGetTotalEccErrors
-     nvmlDeviceGetDetailedEccErrors
-     nvmlDeviceGetUtilizationRates
-     nvmlDeviceGetDriverModel
-     nvmlDeviceGetVbiosVersion
-     nvmlDeviceGetComputeRunningProcesses
+     nvmlUnitGetUnitInfo
      nvmlUnitSetLedState
-     nvmlDeviceSetPersistenceMode
-     nvmlDeviceSetComputeMode
-     nvmlDeviceSetEccMode
-     nvmlDeviceClearEccErrorCounts
-     nvmlDeviceSetDriverModel
-     nvmlEventSetCreate
-     nvmlDeviceRegisterEvents
-     nvmlDeviceGetSupportedEventTypes
-     nvmlEventSetWait
-     nvmlEventSetFree
-     nvmlEventDataGetPerformanceState
-     nvmlEventDataGetXidCriticalError
-     nvmlEventDataGetEccErrorCount
-     nvmlDeviceOnSameBoard
-     nvmlDeviceGetMaxPcieLinkGeneration
-     nvmlDeviceGetCurrPcieLinkGeneration
-     nvmlDeviceGetMaxPcieLinkWidth
-     nvmlDeviceGetCurrPcieLinkWidth
      
      $NVML_FEATURE_DISABLED
      $NVML_FEATURE_ENABLED
@@ -119,11 +131,21 @@ our @EXPORT_OK =
      $NVML_COMPUTEMODE_EXCLUSIVE_PROCESS
      $NVML_SINGLE_BIT_ECC
      $NVML_DOUBLE_BIT_ECC
+     $NVML_MEMORY_ERROR_TYPE_CORRECTED
+     $NVML_MEMORY_ERROR_TYPE_UNCORRECTED
+     $NVML_MEMORY_ERROR_TYPE_COUNT
      $NVML_VOLATILE_ECC
      $NVML_AGGREGATE_ECC
+     $NVML_MEMORY_LOCATION_L1_CACHE
+     $NVML_MEMORY_LOCATION_L2_CACHE
+     $NVML_MEMORY_LOCATION_DEVICE_MEMORY
+     $NVML_MEMORY_LOCATION_REGISTER_FILE
+     $NVML_MEMORY_LOCATION_TEXTURE_MEMORY
+     $NVML_MEMORY_LOCATION_COUNT
      $NVML_CLOCK_GRAPHICS
      $NVML_CLOCK_SM
      $NVML_CLOCK_MEM
+     $NVML_CLOCK_COUNT
      $NVML_DRIVER_WDDM
      $NVML_DRIVER_WDM
      $NVML_PSTATE_0
@@ -146,6 +168,7 @@ our @EXPORT_OK =
      $NVML_INFOROM_OEM
      $NVML_INFOROM_ECC
      $NVML_INFOROM_POWER
+     $NVML_INFOROM_COUNT
      $NVML_SUCCESS
      $NVML_ERROR_UNINITIALIZED
      $NVML_ERROR_INVALID_ARGUMENT
@@ -157,6 +180,10 @@ our @EXPORT_OK =
      $NVML_ERROR_INSUFFICIENT_POWER
      $NVML_ERROR_DRIVER_NOT_LOADED
      $NVML_ERROR_TIMEOUT
+     $NVML_ERROR_IRQ_ISSUE
+     $NVML_ERROR_LIBRARY_NOT_FOUND
+     $NVML_ERROR_FUNCTION_NOT_FOUND
+     $NVML_ERROR_CORRUPTED_INFOROM
      $NVML_ERROR_UNKNOWN
      $NVML_FAN_NORMAL
      $NVML_FAN_FAILED
@@ -165,6 +192,7 @@ our @EXPORT_OK =
      $nvmlEventTypeSingleBitEccError
      $nvmlEventTypeDoubleBitEccError
      $nvmlEventTypePState
+     $nvmlEventTypeClock
      $nvmlEventTypeXidCriticalError
      $nvmlEventTypeNone
      $nvmlEventTypeAll
@@ -175,6 +203,13 @@ our @EXPORT_OK =
      $NVML_DEVICE_NAME_BUFFER_SIZE
      $NVML_DEVICE_SERIAL_BUFFER_SIZE
      $NVML_DEVICE_VBIOS_VERSION_BUFFER_SIZE
+     $nvmlClocksThrottleReasonGpuIdle
+     $nvmlClocksThrottleReasonUserDefinedClocks
+     $nvmlClocksThrottleReasonSwPowerCap
+     $nvmlClocksThrottleReasonHwSlowdown
+     $nvmlClocksThrottleReasonUnknown
+     $nvmlClocksThrottleReasonNone
+     $nvmlClocksThrottleReasonAll
     );
 
 # use nvidia::ml qw(:all);
@@ -427,7 +462,13 @@ sub nvmlDeviceGetInforomVersion
     my $object = shift;
     return nvidia::ml::bindings::nvmlDeviceGetInforomVersion($handle, $object, $nvidia::ml::bindings::NVML_DEVICE_INFOROM_VERSION_BUFFER_SIZE);
 }
+sub nvmlDeviceGetInforomImageVersion
+{
+    my $handle = shift;
+    return nvidia::ml::bindings::nvmlDeviceGetInforomImageVersion($handle, $nvidia::ml::bindings::NVML_DEVICE_INFOROM_VERSION_BUFFER_SIZE);
+}
 
+*nvmlDeviceGetInforomConfigurationChecksum = *nvidia::ml::bindings::nvmlDeviceGetInforomConfigurationChecksum;
 *nvmlDeviceGetDisplayMode     = *nvidia::ml::bindings::nvmlDeviceGetDisplayMode;
 *nvmlDeviceGetPersistenceMode = *nvidia::ml::bindings::nvmlDeviceGetPersistenceMode;
 
@@ -462,6 +503,8 @@ sub nvmlDeviceGetPciInfo
 
 *nvmlDeviceGetClockInfo            = *nvidia::ml::bindings::nvmlDeviceGetClockInfo;
 *nvmlDeviceGetMaxClockInfo         = *nvidia::ml::bindings::nvmlDeviceGetMaxClockInfo;
+*nvmlDeviceGetApplicationsClock    = *nvidia::ml::bindings::nvmlDeviceGetApplicationsClock;
+*nvmlDeviceResetApplicationsClocks = *nvidia::ml::bindings::nvmlDeviceResetApplicationsClocks;
 *nvmlDeviceGetFanSpeed             = *nvidia::ml::bindings::nvmlDeviceGetFanSpeed;
 *nvmlDeviceGetTemperature          = *nvidia::ml::bindings::nvmlDeviceGetTemperature;
 
@@ -472,6 +515,8 @@ sub nvmlDeviceGetPciInfo
 
 *nvmlDeviceGetPowerManagementMode  = *nvidia::ml::bindings::nvmlDeviceGetPowerManagementMode;
 *nvmlDeviceGetPowerManagementLimit = *nvidia::ml::bindings::nvmlDeviceGetPowerManagementLimit;
+*nvmlDeviceGetPowerManagementLimitConstraints = *nvidia::ml::bindings::nvmlDeviceGetPowerManagementLimitConstraints;
+*nvmlDeviceGetPowerManagementDefaultLimit     = *nvidia::ml::bindings::nvmlDeviceGetPowerManagementDefaultLimit;
 *nvmlDeviceGetPowerUsage           = *nvidia::ml::bindings::nvmlDeviceGetPowerUsage;
 
 sub nvmlDeviceGetMemoryInfo
@@ -494,10 +539,12 @@ sub nvmlDeviceGetMemoryInfo
     return ($ret, \%infohash);
 }
 
-*nvmlDeviceGetComputeMode    = *nvidia::ml::bindings::nvmlDeviceGetComputeMode;
-*nvmlDeviceGetEccMode        = *nvidia::ml::bindings::nvmlDeviceGetEccMode;
-*nvmlDeviceGetTotalEccErrors = *nvidia::ml::bindings::nvmlDeviceGetTotalEccErrors;
+*nvmlDeviceGetComputeMode        = *nvidia::ml::bindings::nvmlDeviceGetComputeMode;
+*nvmlDeviceGetEccMode            = *nvidia::ml::bindings::nvmlDeviceGetEccMode;
+*nvmlDeviceGetTotalEccErrors     = *nvidia::ml::bindings::nvmlDeviceGetTotalEccErrors;
+*nvmlDeviceGetMemoryErrorCounter = *nvidia::ml::bindings::nvmlDeviceGetMemoryErrorCounter;
 
+# This is deprecated, instead use nvmlDeviceGetMemoryErrorCounter
 sub nvmlDeviceGetDetailedEccErrors
 {
     my $handle = shift;
@@ -603,12 +650,99 @@ sub nvmlDeviceGetComputeRunningProcesses
     return ($ret, \@pl_procs);
 }
 
+sub nvmlDeviceGetSupportedMemoryClocks
+{
+    my $handle = shift;
+    my $clockCount;
+    my $ret;
+    
+    ($ret, $clockCount) = nvidia::ml::bindings::_nvmlDeviceGetSupportedMemoryClocks($handle, 0, undef);
+    if ($ret == $nvidia::ml::bindings::NVML_SUCCESS)
+    {
+        # empty set
+        my @set = ();
+        return ($ret, \@set);
+    }
+    
+    if ($ret != $nvidia::ml::bindings::NVML_ERROR_INSUFFICIENT_SIZE)
+    {
+        # error
+        my @set = ();
+        return ($ret, \@set);
+    }
+    
+    # create an array of the needed size
+    my $clocks = nvidia::ml::bindings::_createUIntArray($clockCount);
+    
+    # get the clocks
+    ($ret, $clockCount) = nvidia::ml::bindings::_nvmlDeviceGetSupportedMemoryClocks($handle, $clockCount, $clocks);
+    
+    my @pl_clocks = ();
+    if ($ret == $nvidia::ml::bindings::NVML_SUCCESS)
+    {
+        foreach my $i (0..$clockCount-1)
+        {
+            my $clock = nvidia::ml::bindings::_getUIntByIndex($clocks, $i);
+            push @pl_clocks, $clock;
+        }
+    }
+    nvidia::ml::bindings::_freeUIntArray($clocks);
+    
+    return ($ret, \@pl_clocks);
+}
+
+sub nvmlDeviceGetSupportedGraphicsClocks
+{
+    my $handle = shift;
+    my $memoryClockMHz = shift;
+    my $clockCount;
+    my $ret;
+    
+    ($ret, $clockCount) = nvidia::ml::bindings::_nvmlDeviceGetSupportedGraphicsClocks($handle, $memoryClockMHz, 0, undef);
+    if ($ret == $nvidia::ml::bindings::NVML_SUCCESS)
+    {
+        # empty set
+        my @set = ();
+        return ($ret, \@set);
+    }
+    
+    if ($ret != $nvidia::ml::bindings::NVML_ERROR_INSUFFICIENT_SIZE)
+    {
+        # error
+        my @set = ();
+        return ($ret, \@set);
+    }
+    
+    # create an array of the needed size
+    my $clocks = nvidia::ml::bindings::_createUIntArray($clockCount);
+    
+    # get the clocks
+    ($ret, $clockCount) = nvidia::ml::bindings::_nvmlDeviceGetSupportedGraphicsClocks($handle, $memoryClockMHz, $clockCount, $clocks);
+    
+    my @pl_clocks = ();
+    if ($ret == $nvidia::ml::bindings::NVML_SUCCESS)
+    {
+        foreach my $i (0..$clockCount-1)
+        {
+            my $clock = nvidia::ml::bindings::_getUIntByIndex($clocks, $i);
+            push @pl_clocks, $clock;
+        }
+    }
+    nvidia::ml::bindings::_freeUIntArray($clocks);
+    
+    return ($ret, \@pl_clocks);
+}
+
 *nvmlUnitSetLedState           = *nvidia::ml::bindings::nvmlUnitSetLedState;
 *nvmlDeviceSetPersistenceMode  = *nvidia::ml::bindings::nvmlDeviceSetPersistenceMode;
 *nvmlDeviceSetComputeMode      = *nvidia::ml::bindings::nvmlDeviceSetComputeMode;
 *nvmlDeviceSetEccMode          = *nvidia::ml::bindings::nvmlDeviceSetEccMode;
 *nvmlDeviceClearEccErrorCounts = *nvidia::ml::bindings::nvmlDeviceClearEccErrorCounts;
 *nvmlDeviceSetDriverModel      = *nvidia::ml::bindings::nvmlDeviceSetDriverModel;
+*nvmlDeviceSetApplicationsClocks      = *nvidia::ml::bindings::nvmlDeviceSetApplicationsClocks;
+*nvmlDeviceSetPowerManagementLimit = *nvidia::ml::bindings::nvmlDeviceSetPowerManagementLimit;
+
+*nvmlDeviceValidateInforom     = *nvidia::ml::bindings::nvmlDeviceValidateInforom;
 
 # events
 *nvmlEventSetCreate               = *nvidia::ml::bindings::nvmlEventSetCreate;
@@ -638,49 +772,14 @@ sub nvmlEventSetWait
 }
 
 *nvmlEventSetFree                 = *nvidia::ml::bindings::nvmlEventSetFree;
-
-# free after use
-sub ReconstructData
-{
-    my $infohashref = shift;
-    my $cdata = new nvidia::ml::bindings::nvmlEventData_t();
-    $cdata->swig_device_set($infohashref->{'device'});
-    $cdata->swig_eventType_set($infohashref->{'eventType'});
-    $cdata->swig_data_set($infohashref->{'data'});
-    return $cdata;
-}
-
-sub nvmlEventDataGetPerformanceState
-{
-    my $infohashref = shift;
-    my $cdata = ReconstructData($infohashref);
-    my ($ret, $val) = nvidia::ml::bindings::nvmlEventDataGetPerformanceState($cdata);
-    $cdata->DESTROY();
-    return ($ret, $val);
-}
-sub nvmlEventDataGetXidCriticalError
-{
-    my $infohashref = shift;
-    my $cdata = ReconstructData($infohashref);
-    my ($ret, $val) = nvidia::ml::bindings::nvmlEventDataGetXidCriticalError($cdata);
-    $cdata->DESTROY();
-    return ($ret, $val);
-}
-sub nvmlEventDataGetEccErrorCount
-{
-    my $infohashref = shift;
-    my $cdata = ReconstructData($infohashref);
-    my ($ret, $val) = nvidia::ml::bindings::nvmlEventDataGetEccErrorCount($cdata);
-    $cdata->DESTROY();
-    return ($ret, $val);
-}
-
 *nvmlDeviceOnSameBoard                  = *nvidia::ml::bindings::nvmlDeviceOnSameBoard;
 
 *nvmlDeviceGetMaxPcieLinkGeneration     = *nvidia::ml::bindings::nvmlDeviceGetMaxPcieLinkGeneration;
 *nvmlDeviceGetCurrPcieLinkGeneration    = *nvidia::ml::bindings::nvmlDeviceGetCurrPcieLinkGeneration;
 *nvmlDeviceGetMaxPcieLinkWidth          = *nvidia::ml::bindings::nvmlDeviceGetMaxPcieLinkWidth;
 *nvmlDeviceGetCurrPcieLinkWidth         = *nvidia::ml::bindings::nvmlDeviceGetCurrPcieLinkWidth;
+*nvmlDeviceGetCurrentClocksThrottleReasons   = *nvidia::ml::bindings::nvmlDeviceGetCurrentClocksThrottleReasons;
+*nvmlDeviceGetSupportedClocksThrottleReasons = *nvidia::ml::bindings::nvmlDeviceGetSupportedClocksThrottleReasons;
 
 1;
 

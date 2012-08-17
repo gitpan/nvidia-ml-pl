@@ -51,7 +51,7 @@ Supported OS platforms:
 
 Supported products:
 - Full Support
-    - NVIDIA Tesla &tm; Line:   S1070, S2050, C1060, C2050/70/75, M2050/70/75/90, X2070/90
+    - NVIDIA Tesla &tm; Line:   S1070, S2050, C1060, C2050/70/75, M2050/70/75/90, X2070/90, K10, K20
     - NVIDIA Quadro &reg; Line:  4000, 5000, 6000, 7000, M2070-Q
     - NVIDIA GeForce &reg; Line: None
 - Limited Support
@@ -86,9 +86,11 @@ List of changes can be found in the \ref Changelog
 \latexonly
 \section{Feature Matrix}
 \endlatexonly
+\image latex FeatureMatrix_TeslaFermiAndKepler-0.png "This chart shows which features are reported for each Fermi and Kepler architecture GPU product." height=21cm
+\image latex FeatureMatrix_QuadroAndT10-0.png "This chart shows which features are reported for each Quadro and T10 GPU product." height=21cm
+\image latex FeatureMatrix_TeslaFermiAndKepler-1.png "This chart shows which commands are available for each Fermi and Kepler architecture GPU product." width=16cm
+\image latex FeatureMatrix_QuadroAndT10-1.png "This chart shows which commands are available for each Quadro and T10 GPU product." width=16cm
 \image latex FeatureMatrix_Units.png "This chart shows which unit-level features are available for each S-class product. All GPUs within each S-class product also provide the information listed in the Device chart below." width=10cm
-\image latex FeatureMatrix_Fermi.png "This chart shows which features are available for each Fermi and Kepler architecture GPU product." width=15cm
-\image latex FeatureMatrix_QuadroAndT10.png "This chart shows which features are available for each Quadro and T10 GPU product." height=22cm
 */
 
 #ifndef __nvml_nvml_h__
@@ -100,12 +102,17 @@ extern "C" {
 
 /*
  * On Windows, set up methods for DLL export
+ * define NVML_STATIC_IMPORT when using nvml_loader library
  */
 #if defined _WINDOWS
-    #if defined LIB_EXPORT
-        #define DECLDIR __declspec(dllexport)
+    #if !defined NVML_STATIC_IMPORT
+        #if defined LIB_EXPORT
+            #define DECLDIR __declspec(dllexport)
+        #else
+            #define DECLDIR __declspec(dllimport)
+        #endif
     #else
-        #define DECLDIR __declspec(dllimport)
+        #define DECLDIR
     #endif
 #else
     #define DECLDIR
@@ -114,8 +121,8 @@ extern "C" {
 /**
  * NVML API versioning support
  */
-#define NVML_API_VERSION            3
-#define NVML_API_VERSION_STR        "3"
+#define NVML_API_VERSION            4
+#define NVML_API_VERSION_STR        "4"
 #define nvmlDeviceGetPciInfo        nvmlDeviceGetPciInfo_v2
 
 /***************************************************************************************************/
@@ -157,6 +164,9 @@ typedef struct nvmlPciInfo_st
 
 /**
  * Detailed ECC error counts for a device.
+ *
+ * @deprecated  Different GPU families can have different memory error counters
+ *              See \ref nvmlDeviceGetMemoryErrorCounter
  */
 typedef struct nvmlEccErrorCounts_st 
 {
@@ -192,8 +202,8 @@ typedef struct nvmlProcessInfo_st
 {
     unsigned int pid;                 //!< Process ID
     unsigned long long usedGpuMemory; //!< Amount of used GPU memory in bytes.
-                                      //!< Under WDDM, \ref NVML_VALUE_NOT_AVAILABLE is always reported
-                                      //!< because Windows KMD manages all the memory and not the NVIDIA driver
+                                      //! Under WDDM, \ref NVML_VALUE_NOT_AVAILABLE is always reported
+                                      //! because Windows KMD manages all the memory and not the NVIDIA driver
 } nvmlProcessInfo_t;
 
 /** @} */
@@ -242,13 +252,51 @@ typedef enum nvmlComputeMode_enum
 } nvmlComputeMode_t;
 
 /** 
- * ECC bit types. 
+ * ECC bit types.
+ *
+ * @deprecated See \ref nvmlMemoryErrorType_t for a more flexible type
  */
-typedef enum nvmlEccBitType_enum 
+#define nvmlEccBitType_t nvmlMemoryErrorType_t
+
+/**
+ * Single bit ECC errors
+ *
+ * @deprecated Mapped to \ref NVML_MEMORY_ERROR_TYPE_CORRECTED
+ */
+#define NVML_SINGLE_BIT_ECC NVML_MEMORY_ERROR_TYPE_CORRECTED
+
+/**
+ * Double bit ECC errors
+ *
+ * @deprecated Mapped to \ref NVML_MEMORY_ERROR_TYPE_UNCORRECTED
+ */
+#define NVML_DOUBLE_BIT_ECC NVML_MEMORY_ERROR_TYPE_UNCORRECTED
+
+/**
+ * Memory error types
+ */
+typedef enum nvmlMemoryErrorType_enum
 {
-    NVML_SINGLE_BIT_ECC     = 0,      //!< Single bit ECC errors 
-    NVML_DOUBLE_BIT_ECC     = 1       //!< Double bit ECC errors
-} nvmlEccBitType_t;
+    /**
+     * A memory error that was corrected
+     * 
+     * For ECC errors, these are single bit errors
+     * For Texture memory, these are errors fixed by resend
+     */
+    NVML_MEMORY_ERROR_TYPE_CORRECTED = 0,
+    /**
+     * A memory error that was not corrected
+     * 
+     * For ECC errors, these are double bit errors
+     * For Texture memory, these are errors where the resend fails
+     */
+    NVML_MEMORY_ERROR_TYPE_UNCORRECTED = 1,
+    
+    
+    // Keep this last
+    NVML_MEMORY_ERROR_TYPE_COUNT //!< Count of memory error types
+
+} nvmlMemoryErrorType_t;
 
 /** 
  * ECC counter types. 
@@ -273,7 +321,8 @@ typedef enum nvmlClockType_enum
 {
     NVML_CLOCK_GRAPHICS  = 0,        //!< Graphics clock domain
     NVML_CLOCK_SM        = 1,        //!< SM clock domain
-    NVML_CLOCK_MEM       = 2         //!< Memory clock domain
+    NVML_CLOCK_MEM       = 2,        //!< Memory clock domain
+    NVML_CLOCK_COUNT
 } nvmlClockType_t;
 
 /** 
@@ -308,7 +357,7 @@ typedef enum nvmlPStates_enum
     NVML_PSTATE_13              = 13,      //!< Performance state 13
     NVML_PSTATE_14              = 14,      //!< Performance state 14
     NVML_PSTATE_15              = 15,      //!< Performance state 15 -- Minimum Performance 
-    NVML_PSTATE_UNKNOWN         = 32,      //!< Unknown performance state
+    NVML_PSTATE_UNKNOWN         = 32       //!< Unknown performance state
 } nvmlPstates_t;
 
 /** 
@@ -318,7 +367,10 @@ typedef enum nvmlInforomObject_enum
 {
     NVML_INFOROM_OEM            = 0,       //!< An object defined by OEM
     NVML_INFOROM_ECC            = 1,       //!< The ECC object determining the level of ECC support
-    NVML_INFOROM_POWER          = 2        //!< The power management object
+    NVML_INFOROM_POWER          = 2,       //!< The power management object
+
+    // Keep this last
+    NVML_INFOROM_COUNT                     //!< This counts the number of infoROM objects the driver knows about
 } nvmlInforomObject_t;
 
 /** 
@@ -337,8 +389,29 @@ typedef enum nvmlReturn_enum
     NVML_ERROR_INSUFFICIENT_POWER = 8,  //!< A device's external power cables are not properly attached
     NVML_ERROR_DRIVER_NOT_LOADED = 9,   //!< NVIDIA driver is not loaded
     NVML_ERROR_TIMEOUT = 10,            //!< User provided timeout passed
+    NVML_ERROR_IRQ_ISSUE = 11,          //!< NVIDIA Kernel detected an interrupt issue with a GPU
+    NVML_ERROR_LIBRARY_NOT_FOUND = 12,  //!< NVML Shared Library couldn't be found or loaded
+    NVML_ERROR_FUNCTION_NOT_FOUND = 13, //!< Local version of NVML doesn't implement this function
+    NVML_ERROR_CORRUPTED_INFOROM = 14,  //!< infoROM is corrupted
     NVML_ERROR_UNKNOWN = 999            //!< An internal driver error occurred
 } nvmlReturn_t;
+
+/**
+ * Memory locations
+ *
+ * See \ref nvmlDeviceGetMemoryErrorCounter
+ */
+typedef enum nvmlMemoryLocation_enum
+{
+    NVML_MEMORY_LOCATION_L1_CACHE = 0,       //!< GPU L1 Cache
+    NVML_MEMORY_LOCATION_L2_CACHE = 1,       //!< GPU L2 Cache
+    NVML_MEMORY_LOCATION_DEVICE_MEMORY = 2,  //!< GPU Device Memory
+    NVML_MEMORY_LOCATION_REGISTER_FILE = 3,  //!< GPU Register File
+    NVML_MEMORY_LOCATION_TEXTURE_MEMORY = 4, //!< GPU Texture Memory
+    
+    // Keep this last
+    NVML_MEMORY_LOCATION_COUNT              //!< This counts the number of memory locations the driver knows about
+} nvmlMemoryLocation_t;
 
 /** @} */
 
@@ -464,24 +537,35 @@ typedef struct nvmlEventSet_st* nvmlEventSet_t;
  */
 //! Event about single bit ECC errors
 #define nvmlEventTypeSingleBitEccError     0x0000000000000001LL
+
 //! Event about double bit ECC errors
 #define nvmlEventTypeDoubleBitEccError     0x0000000000000002LL
+
 //! Event about PState changes
 /**
  *  \note On Fermi architecture PState changes are also an indicator that GPU is throttling down due to
  *  no work being executed on the GPU, power capping or thermal capping. In a typical situation,
  *  Fermi-based GPU should stay in P0 for the duration of the execution of the compute process.
  */
-#define nvmlEventTypePState                0x0000000000000004LL     
+#define nvmlEventTypePState                0x0000000000000004LL
+
 //! Event that Xid critical error occurred
-#define nvmlEventTypeXidCriticalError      0x0000000000000008LL     
+#define nvmlEventTypeXidCriticalError      0x0000000000000008LL
+
+//! Event about clock changes
+/**
+ * Kepler only
+ */
+#define nvmlEventTypeClock                 0x0000000000000010LL
+
 //! Mask with no events
-#define nvmlEventTypeNone                  0x0000000000000000LL     
+#define nvmlEventTypeNone                  0x0000000000000000LL
 //! Mask of all events
 #define nvmlEventTypeAll (nvmlEventTypeNone    \
         | nvmlEventTypeSingleBitEccError       \
         | nvmlEventTypeDoubleBitEccError       \
         | nvmlEventTypePState                  \
+        | nvmlEventTypeClock                   \
         | nvmlEventTypeXidCriticalError        \
         )
 /** @} */
@@ -496,6 +580,67 @@ typedef struct nvmlEventData_st
     unsigned long long  reserved;
 } nvmlEventData_t;
 
+/** @} */
+
+/***************************************************************************************************/
+/** @addtogroup nvmlClocksThrottleReasons
+ *  @{
+ */
+/***************************************************************************************************/
+
+/** Nothing is running on the GPU and the clocks are dropping to Idle state
+ * \note This limiter may be removed in a later release
+ */
+#define nvmlClocksThrottleReasonGpuIdle                   0x0000000000000001LL
+
+/** GPU clocks are limited by user specified limit
+ *
+ * @see nvmlDeviceSetApplicationsClocks
+ * @see nvmlDeviceGetApplicationsClock
+ */
+#define nvmlClocksThrottleReasonUserDefinedClocks         0x0000000000000002LL
+
+/** SW Power Scaling algorithm is reducing the clocks below requested clocks 
+ *
+ * @see nvmlDeviceGetPowerUsage
+ * @see nvmlDeviceSetPowerManagementLimit
+ * @see nvmlDeviceGetPowerManagementLimit
+ */
+#define nvmlClocksThrottleReasonSwPowerCap                0x0000000000000004LL
+
+/** HW Slowdown (reducing the core clocks by a factor of 2 or more) is engaged
+ * 
+ * This is an indicator of:
+ *   - temperature being too high
+ *   - External Power Brake Assertion is triggered (e.g. by the system power supply)
+ *   - Power draw is too high and Fast Trigger protection is reducing the clocks
+ *   - May be also reported during PState or clock change
+ *      - This behavior may be removed in a later release.
+ *
+ * @see nvmlDeviceGetTemperature
+ * @see nvmlDeviceGetPowerUsage
+ */
+#define nvmlClocksThrottleReasonHwSlowdown                0x0000000000000008LL
+
+/** Some other unspecified factor is reducing the clocks */
+#define nvmlClocksThrottleReasonUnknown                   0x8000000000000000LL
+
+/** Bit mask representing no clocks throttling
+ *
+ * Clocks are as high as possible.
+ * */
+#define nvmlClocksThrottleReasonNone                      0x0000000000000000LL
+
+/** Bit mask representing all supported clocks throttling reasons 
+ * New reasons might be added to this list in the future
+ */
+#define nvmlClocksThrottleReasonAll (nvmlClocksThrottleReasonNone \
+      | nvmlClocksThrottleReasonGpuIdle                           \
+      | nvmlClocksThrottleReasonUserDefinedClocks                 \
+      | nvmlClocksThrottleReasonSwPowerCap                        \
+      | nvmlClocksThrottleReasonHwSlowdown                        \
+      | nvmlClocksThrottleReasonUnknown                           \
+        ) 
 /** @} */
 
 /***************************************************************************************************/
@@ -572,7 +717,7 @@ const DECLDIR char* nvmlErrorString(nvmlReturn_t result);
 /***************************************************************************************************/
 
 /**
- * Buffer size guaranteed to be large enough for \ref nvmlDeviceGetInforomVersion
+ * Buffer size guaranteed to be large enough for \ref nvmlDeviceGetInforomVersion and \ref nvmlDeviceGetInforomImageVersion
  */
 #define NVML_DEVICE_INFOROM_VERSION_BUFFER_SIZE       16
 
@@ -1024,7 +1169,7 @@ nvmlReturn_t DECLDIR nvmlDeviceGetSerial(nvmlDevice_t device, char *serial, unsi
  * Retrieves the globally unique immutable UUID associated with this device, as a 5 part hexadecimal string,
  * that augments the immutable, board serial identifier.
  *
- * For Tesla &tm; and Quadro &reg; products from the Fermi and Kepler families.
+ * For all CUDA capable GPUs.
  *
  * The UUID is a globally unique identifier. It is the only available identifier for pre-Fermi-architecture products.
  * It does NOT correspond to any identifier printed on the board.  It will not exceed 80 characters in length
@@ -1045,14 +1190,14 @@ nvmlReturn_t DECLDIR nvmlDeviceGetSerial(nvmlDevice_t device, char *serial, unsi
 nvmlReturn_t DECLDIR nvmlDeviceGetUUID(nvmlDevice_t device, char *uuid, unsigned int length);
 
 /**
- * Retrieves the version information for the device's infoROM.
+ * Retrieves the version information for the device's infoROM object.
  *
  * For Tesla &tm; and Quadro &reg; products from the Fermi and Kepler families.
  *
  * Fermi and higher parts have non-volatile on-board memory for persisting device info, such as aggregate 
  * ECC counts. The version of the data structures in this memory may change from time to time. It will not
- * exceed 16 characters in length (including the NULL terminator).  See \ref
- * nvmlConstants::NVML_DEVICE_INFOROM_VERSION_BUFFER_SIZE.
+ * exceed 16 characters in length (including the NULL terminator).
+ * See \ref nvmlConstants::NVML_DEVICE_INFOROM_VERSION_BUFFER_SIZE.
  *
  * See \ref nvmlInforomObject_t for details on the available infoROM objects.
  *
@@ -1068,8 +1213,74 @@ nvmlReturn_t DECLDIR nvmlDeviceGetUUID(nvmlDevice_t device, char *uuid, unsigned
  *         - \ref NVML_ERROR_INSUFFICIENT_SIZE if \a length is too small 
  *         - \ref NVML_ERROR_NOT_SUPPORTED     if the device does not have an infoROM
  *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
+ *
+ * @see nvmlDeviceGetInforomImageVersion
  */
 nvmlReturn_t DECLDIR nvmlDeviceGetInforomVersion(nvmlDevice_t device, nvmlInforomObject_t object, char *version, unsigned int length);
+
+/**
+ * Retrieves the global infoROM image version
+ *
+ * For Tesla &tm; and Quadro &reg; products from the Kepler family.
+ *
+ * Image version just like VBIOS version uniquely describes the exact version of the infoROM flashed on the board 
+ * in contrast to infoROM object version which is only an indicator of supported features.
+ * Version string will not exceed 16 characters in length (including the NULL terminator).
+ * See \ref nvmlConstants::NVML_DEVICE_INFOROM_VERSION_BUFFER_SIZE.
+ *
+ * @param device                               The identifier of the target device
+ * @param version                              Reference in which to return the infoROM image version
+ * @param length                               The maximum allowed length of the string returned in \a version
+ *
+ * @return 
+ *         - \ref NVML_SUCCESS                 if \a version has been set
+ *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a version is NULL
+ *         - \ref NVML_ERROR_INSUFFICIENT_SIZE if \a length is too small 
+ *         - \ref NVML_ERROR_NOT_SUPPORTED     if the device does not have an infoROM
+ *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
+ *
+ * @see nvmlDeviceGetInforomVersion
+ */
+nvmlReturn_t DECLDIR nvmlDeviceGetInforomImageVersion(nvmlDevice_t device, char *version, unsigned int length);
+
+/**
+ * Retrieves the checksum of the configuration stored in the device's infoROM.
+ *
+ * For Tesla &tm; and Quadro &reg; products from the Fermi and Kepler families.
+ *
+ * Can be used to make sure that two GPUs have the exact same configuration.
+ * Current checksum takes into account configuration stored in PWR and ECC infoROM objects.
+ * Checksum can change between driver releases or when user changes configuration (e.g. disable/enable ECC)
+ *
+ * @param device                               The identifier of the target device
+ * @param checksum                             Reference in which to return the infoROM configuration checksum
+ *
+ * @return 
+ *         - \ref NVML_SUCCESS                 if \a checksum has been set
+ *         - \ref NVML_ERROR_CORRUPTED_INFOROM if the device's checksum couldn't be retrieved due to infoROM corruption
+ *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a checksum is NULL
+ *         - \ref NVML_ERROR_NOT_SUPPORTED     if the device does not support this feature
+ *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error 
+ */
+nvmlReturn_t DECLDIR nvmlDeviceGetInforomConfigurationChecksum(nvmlDevice_t device, unsigned int *checksum);
+
+/**
+ * Reads the infoROM from the flash and verifies the checksums.
+ *
+ * For Tesla &tm; and Quadro &reg; products from the Fermi and Kepler families.
+ *
+ * @param device                               The identifier of the target device
+ *
+ * @return 
+ *         - \ref NVML_SUCCESS                 if infoROM is not corrupted
+ *         - \ref NVML_ERROR_CORRUPTED_INFOROM if the device's infoROM is corrupted
+ *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
+ *         - \ref NVML_ERROR_NOT_SUPPORTED     if the device does not support this feature
+ *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error 
+ */
+nvmlReturn_t DECLDIR nvmlDeviceValidateInforom(nvmlDevice_t device);
 
 /**
  * Retrieves the display mode for the device.
@@ -1249,7 +1460,103 @@ nvmlReturn_t DECLDIR nvmlDeviceGetClockInfo(nvmlDevice_t device, nvmlClockType_t
 nvmlReturn_t DECLDIR nvmlDeviceGetMaxClockInfo(nvmlDevice_t device, nvmlClockType_t type, unsigned int *clock);
 
 /**
- * Retrieves the current operating speed of the device's fan.
+ * Retrieves the clock that applications will use unless an overspec situation occurs.
+ * Can be changed using \ref nvmlDeviceSetApplicationsClocks.
+ *
+ * For Tesla &tm; products, and Quadro &reg; products from the Kepler family.
+ *
+ * @param device                               The identifier of the target device
+ * @param clockType                            Identify which clock domain to query
+ * @param clockMHz                             Reference in which to return the clock in MHz
+ * 
+ * @return 
+ *         - \ref NVML_SUCCESS                 if new settings were successfully set
+ *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
+ *         - \ref NVML_ERROR_NOT_FOUND         if the max clock limit is not set
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device is invalid or \a clockMHz is NULL or \a clockType is invalid
+ *         - \ref NVML_ERROR_NOT_SUPPORTED     if the device cannot report the specified clock 
+ *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
+ */
+nvmlReturn_t DECLDIR nvmlDeviceGetApplicationsClock(nvmlDevice_t device, nvmlClockType_t clockType, unsigned int *clockMHz);
+
+/**
+ * Resets the application clock to the default value
+ *
+ * This is the applications clock that will be used after system reboot or driver reload.
+ * Default value is constant, but the current value an be changed using \ref nvmlDeviceSetApplicationsClocks.
+ *
+ * @see nvmlDeviceGetApplicationsClock
+ * @see nvmlDeviceSetApplicationsClock
+ *
+ * For Tesla &tm; products, and Quadro &reg; products from the Kepler family.
+ *
+ * @param device                               The identifier of the target device
+ * 
+ * @return 
+ *         - \ref NVML_SUCCESS                 if new settings were successfully set
+ *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
+ *         - \ref NVML_ERROR_NOT_FOUND         if the max clock limit is not set
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device is invalid
+ *         - \ref NVML_ERROR_NOT_SUPPORTED     if the device cannot perform this action
+ *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
+ */
+nvmlReturn_t DECLDIR nvmlDeviceResetApplicationsClocks(nvmlDevice_t device);
+
+/**
+ * Retrieves the list of possible memory clocks that can be used as an argument for \ref nvmlDeviceSetApplicationsClocks.
+ *
+ * For Tesla &tm; products, and Quadro &reg; products from the Kepler family.
+ *
+ * @param device                               The identifier of the target device
+ * @param count                                Reference in which to provide the \a clocksMHz array size, and
+ *                                             to return the number of elements
+ * @param clocksMHz                            Reference in which to return the clock in MHz
+ * 
+ * @return 
+ *         - \ref NVML_SUCCESS                 if new settings were successfully set
+ *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
+ *         - \ref NVML_ERROR_NOT_FOUND         if the max clock limit is not set
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device is invalid or \a clock is NULL or \a clockType is invalid
+ *         - \ref NVML_ERROR_NOT_SUPPORTED     if the device cannot report the specified clock 
+ *         - \ref NVML_ERROR_INSUFFICIENT_SIZE if \a count is too small 
+ *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
+ *
+ * @see nvmlDeviceSetApplicationsClocks
+ * @see nvmlDeviceGetSupportedGraphicsClocks
+ */
+nvmlReturn_t DECLDIR nvmlDeviceGetSupportedMemoryClocks(nvmlDevice_t device, unsigned int *count, unsigned int *clocksMHz);
+
+/**
+ * Retrieves the list of possible graphics clocks that can be used as an argument for \ref nvmlDeviceSetApplicationsClocks.
+ *
+ * For Tesla &tm; products, and Quadro &reg; products from the Kepler family.
+ *
+ * @param device                               The identifier of the target device
+ * @param memoryClockMHz                       Memory clock for which to return possible graphics clocks
+ * @param count                                Reference in which to provide the \a clocksMHz array size, and
+ *                                             to return the number of elements
+ * @param clocksMHz                            Reference in which to return the clocks in MHz
+ * 
+ * @return 
+ *         - \ref NVML_SUCCESS                 if new settings were successfully set
+ *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
+ *         - \ref NVML_ERROR_NOT_FOUND         if the max clock limit is not set
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device is invalid or \a clock is NULL or \a clockType is invalid
+ *         - \ref NVML_ERROR_NOT_SUPPORTED     if the device cannot report the specified clock 
+ *         - \ref NVML_ERROR_INSUFFICIENT_SIZE if \a count is too small 
+ *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
+ *
+ * @see nvmlDeviceSetApplicationsClocks
+ * @see nvmlDeviceGetSupportedMemoryClocks
+ */
+nvmlReturn_t DECLDIR nvmlDeviceGetSupportedGraphicsClocks(nvmlDevice_t device, unsigned int memoryClockMHz, unsigned int *count, unsigned int *clocksMHz);
+
+
+/**
+ * Retrieves the intended operating speed of the device's fan.
+ *
+ * Note: The reported speed is the intended fan speed.  If the fan is physically blocked and unable to spin, the
+ * output will not match the actual fan speed.
  * 
  * For all discrete products with dedicated fans.
  *
@@ -1307,16 +1614,60 @@ nvmlReturn_t DECLDIR nvmlDeviceGetTemperature(nvmlDevice_t device, nvmlTemperatu
 nvmlReturn_t DECLDIR nvmlDeviceGetPerformanceState(nvmlDevice_t device, nvmlPstates_t *pState);
 
 /**
+ * Retrieves current clocks throttling reasons.
+ *
+ * For Tesla &tm; products from Kepler family.
+ *
+ * \note More than one bit can be enabled at the same time. Multiple reasons can be affecting clocks at once.
+ *
+ * @param device                                The identifier of the target device
+ * @param clocksThrottleReasons                 Reference in which to return bitmask of active clocks throttle
+ *                                                  reasons
+ *
+ * @return 
+ *         - \ref NVML_SUCCESS                 if \a clocksThrottleReasons has been returned successfully
+ *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device is invalid or \a clocksThrottleReasons is NULL
+ *         - \ref NVML_ERROR_NOT_SUPPORTED     if the device does not support this feature
+ *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
+ *
+ * @see nvmlClocksThrottleReasons
+ * @see nvmlDeviceGetSupportedClocksThrottleReasons
+ */
+nvmlReturn_t DECLDIR nvmlDeviceGetCurrentClocksThrottleReasons(nvmlDevice_t device, unsigned long long *clocksThrottleReasons);
+
+/**
+ * Retrieves bitmask of supported clocks throttle reasons that can be returned by 
+ * \ref nvmlDeviceGetCurrentClocksThrottleReasons
+ *
+ * For all devices
+ *
+ * @param device                               The identifier of the target device
+ * @param supportedClocksThrottleReasons       Reference in which to return bitmask of supported
+ *                                              clocks throttle reasons
+ *
+ * @return 
+ *         - \ref NVML_SUCCESS                 if \a supportedClocksThrottleReasons has been returned successfully
+ *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device is invalid or \a supportedClocksThrottleReasons is NULL
+ *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
+ *
+ * @see nvmlClocksThrottleReasons
+ * @see nvmlDeviceGetCurrentClocksThrottleReasons
+ */
+nvmlReturn_t DECLDIR nvmlDeviceGetSupportedClocksThrottleReasons(nvmlDevice_t device, unsigned long long *supportedClocksThrottleReasons);
+
+/**
  * Deprecated: Use \ref nvmlDeviceGetPerformanceState. This function exposes an incorrect generalization.
  *
- * Retrieve the current power state for the device. 
+ * Retrieve the current performance state for the device. 
  *
  * For Tesla &tm; and Quadro &reg; products from the Fermi and Kepler families.
  *
- * See \ref nvmlPstates_t for details on allowed power states.
+ * See \ref nvmlPstates_t for details on allowed performance states.
  *
  * @param device                               The identifier of the target device
- * @param pState                               Reference in which to return the power state reading
+ * @param pState                               Reference in which to return the performance state reading
  * 
  * @return 
  *         - \ref NVML_SUCCESS                 if \a pState has been set
@@ -1355,7 +1706,7 @@ nvmlReturn_t DECLDIR nvmlDeviceGetPowerState(nvmlDevice_t device, nvmlPstates_t 
 nvmlReturn_t DECLDIR nvmlDeviceGetPowerManagementMode(nvmlDevice_t device, nvmlEnableState_t *mode);
 
 /**
- * Retrieves the power management limit associated with this device, in milliwatts.
+ * Retrieves the power management limit associated with this device.
  *
  * For "GF11x" Tesla &tm; and Quadro &reg; products from the Fermi family.
  *     - Requires \a NVML_INFOROM_POWER version 3.0 or higher.
@@ -1370,7 +1721,7 @@ nvmlReturn_t DECLDIR nvmlDeviceGetPowerManagementMode(nvmlDevice_t device, nvmlE
  * See \ref nvmlDeviceGetPowerManagementMode.
  *
  * @param device                               The identifier of the target device
- * @param limit                                Reference in which to return the power management limit
+ * @param limit                                Reference in which to return the power management limit in milliwatts
  * 
  * @return 
  *         - \ref NVML_SUCCESS                 if \a limit has been set
@@ -1380,6 +1731,44 @@ nvmlReturn_t DECLDIR nvmlDeviceGetPowerManagementMode(nvmlDevice_t device, nvmlE
  *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
  */
 nvmlReturn_t DECLDIR nvmlDeviceGetPowerManagementLimit(nvmlDevice_t device, unsigned int *limit);
+
+/**
+ * Retrieves information about possible values of power management limits on this device.
+ *
+ * For Tesla &tm; and Quadro &reg; products from the Kepler family.
+ *
+ * @param device                               The identifier of the target device
+ * @param minLimit                             Reference in which to return the minimum power management limit in milliwatts
+ * @param maxLimit                             Reference in which to return the maximum power management limit in milliwatts
+ * 
+ * @return 
+ *         - \ref NVML_SUCCESS                 if \a minLimit and \a maxLimit has been set
+ *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device is invalid or \a minLimit or \a maxLimit is NULL
+ *         - \ref NVML_ERROR_NOT_SUPPORTED     if the device does not support this feature
+ *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
+ *
+ * @see nvmlDeviceSetPowerManagementLimit
+ */
+nvmlReturn_t DECLDIR nvmlDeviceGetPowerManagementLimitConstraints(nvmlDevice_t device, unsigned int *minLimit, unsigned int *maxLimit);
+
+/**
+ * Retrieves default power management limit on this device, in milliwatts.
+ * Default power management limit is a power management limit that the device boots with.
+ *
+ * For Tesla &tm; and Quadro &reg; products from the Kepler family.
+ *
+ * @param device                               The identifier of the target device
+ * @param defaultLimit                         Reference in which to return the default power management limit in milliwatts
+ * 
+ * @return 
+ *         - \ref NVML_SUCCESS                 if \a defaultLimit has been set
+ *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device is invalid or \a defaultLimit is NULL
+ *         - \ref NVML_ERROR_NOT_SUPPORTED     if the device does not support this feature
+ *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
+ */
+nvmlReturn_t DECLDIR nvmlDeviceGetPowerManagementDefaultLimit(nvmlDevice_t device, unsigned int *defaultLimit);
 
 /**
  * Retrieves the power usage reading for the device, in milliwatts. This is the power draw for the entire 
@@ -1487,27 +1876,31 @@ nvmlReturn_t DECLDIR nvmlDeviceGetEccMode(nvmlDevice_t device, nvmlEnableState_t
  * The total error count is the sum of errors across each of the separate memory systems, i.e. the total set of 
  * errors across the entire device.
  *
- * See \ref nvmlEccBitType_t for a description of available bit types.\n
+ * See \ref nvmlMemoryErrorType_t for a description of available error types.\n
  * See \ref nvmlEccCounterType_t for a description of available counter types.
  *
  * @param device                               The identifier of the target device
- * @param bitType                              Flag that specifies the bit-type of the errors. 
+ * @param errorType                            Flag that specifies the type of the errors. 
  * @param counterType                          Flag that specifies the counter-type of the errors. 
  * @param eccCounts                            Reference in which to return the specified ECC errors
  * 
  * @return 
  *         - \ref NVML_SUCCESS                 if \a eccCounts has been set
  *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
- *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device, \a bitType or \a counterType is invalid, or \a eccCounts is NULL
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device, \a errorType or \a counterType is invalid, or \a eccCounts is NULL
  *         - \ref NVML_ERROR_NOT_SUPPORTED     if the device does not support this feature
  *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
  *
  * @see nvmlDeviceClearEccErrorCounts()
  */
-nvmlReturn_t DECLDIR nvmlDeviceGetTotalEccErrors(nvmlDevice_t device, nvmlEccBitType_t bitType, nvmlEccCounterType_t counterType, unsigned long long *eccCounts);
+nvmlReturn_t DECLDIR nvmlDeviceGetTotalEccErrors(nvmlDevice_t device, nvmlMemoryErrorType_t errorType, nvmlEccCounterType_t counterType, unsigned long long *eccCounts);
 
 /**
  * Retrieves the detailed ECC error counts for the device.
+ *
+ * @deprecated   This API supports only a fixed set of ECC error locations
+ *               On different GPU architectures different locations are supported
+ *               See \ref nvmlDeviceGetMemoryErrorCounter
  *
  * For Tesla &tm; and Quadro &reg; products from the Fermi and Kepler families.
  * Requires \a NVML_INFOROM_ECC version 2.0 or higher to report aggregate location-based ECC counts.
@@ -1516,25 +1909,60 @@ nvmlReturn_t DECLDIR nvmlDeviceGetTotalEccErrors(nvmlDevice_t device, nvmlEccBit
  *
  * Detailed errors provide separate ECC counts for specific parts of the memory system.
  *
- * See \ref nvmlEccBitType_t for a description of available bit types.\n
+ * Reports zero for unsupported ECC error counters when a subset of ECC error counters are supported.
+ *
+ * See \ref nvmlMemoryErrorType_t for a description of available bit types.\n
  * See \ref nvmlEccCounterType_t for a description of available counter types.\n
  * See \ref nvmlEccErrorCounts_t for a description of provided detailed ECC counts.
  *
  * @param device                               The identifier of the target device
- * @param bitType                              Flag that specifies the bit-type of the errors. 
+ * @param errorType                            Flag that specifies the type of the errors. 
  * @param counterType                          Flag that specifies the counter-type of the errors. 
  * @param eccCounts                            Reference in which to return the specified ECC errors
  * 
  * @return 
  *         - \ref NVML_SUCCESS                 if \a eccCounts has been populated
  *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
- *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device, \a bitType or \a counterType is invalid, or \a eccCounts is NULL
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device, \a errorType or \a counterType is invalid, or \a eccCounts is NULL
  *         - \ref NVML_ERROR_NOT_SUPPORTED     if the device does not support this feature
  *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
  *
  * @see nvmlDeviceClearEccErrorCounts()
  */
-nvmlReturn_t DECLDIR nvmlDeviceGetDetailedEccErrors(nvmlDevice_t device, nvmlEccBitType_t bitType, nvmlEccCounterType_t counterType, nvmlEccErrorCounts_t *eccCounts);
+nvmlReturn_t DECLDIR nvmlDeviceGetDetailedEccErrors(nvmlDevice_t device, nvmlMemoryErrorType_t errorType, nvmlEccCounterType_t counterType, nvmlEccErrorCounts_t *eccCounts);
+
+/**
+ * Retrieves the requested memory error counter for the device.
+ *
+ * For Tesla &tm; and Quadro &reg; products from the Fermi family.
+ * Requires \a NVML_INFOROM_ECC version 2.0 or higher to report aggregate location-based memory error counts.
+ * Requires \a NVML_INFOROM_ECC version 1.0 or higher to report all other memory error counts.
+ *
+ * For all Tesla &tm; and Quadro &reg; products from the Kepler family.
+ *
+ * Requires ECC Mode to be enabled.
+ *
+ * See \ref nvmlMemoryErrorType_t for a description of available memory error types.\n
+ * See \ref nvmlEccCounterType_t for a description of available counter types.\n
+ * See \ref nvmlMemoryLocation_t for a description of available counter locations.\n
+ * 
+ * @param device                               The identifier of the target device
+ * @param errorType                            Flag that specifies the type of error.
+ * @param counterType                          Flag that specifies the counter-type of the errors. 
+ * @param locationType                         Specifies the location of the counter. 
+ * @param count                                Reference in which to return the ECC counter
+ * 
+ * @return 
+ *         - \ref NVML_SUCCESS                 if \a count has been populated
+ *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device, \a bitTyp,e \a counterType or \a locationType is
+ *                                             invalid, or \a count is NULL
+ *         - \ref NVML_ERROR_NOT_SUPPORTED     if the device does not support ECC error reporting in the specified memory
+ *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
+ */
+nvmlReturn_t DECLDIR nvmlDeviceGetMemoryErrorCounter(nvmlDevice_t device, nvmlMemoryErrorType_t errorType,
+                                                   nvmlEccCounterType_t counterType,
+                                                   nvmlMemoryLocation_t locationType, unsigned long long *count);
 
 /**
  * Retrieves the current utilization rates for the device's major subsystems.
@@ -1860,6 +2288,65 @@ nvmlReturn_t DECLDIR nvmlDeviceClearEccErrorCounts(nvmlDevice_t device, nvmlEccC
  */
 nvmlReturn_t DECLDIR nvmlDeviceSetDriverModel(nvmlDevice_t device, nvmlDriverModel_t driverModel, unsigned int flags);
 
+/**
+ * Set clocks that applications will lock to.
+ *
+ * Sets the clocks that compute and graphics applications will be running at.
+ * e.g. CUDA driver requests these clocks during context creation which means this property 
+ * defines clocks at which CUDA applications will be running unless some overspec event
+ * occurs (e.g. over power, over thermal or external HW brake).
+ *
+ * Can be used as a setting to request constant performance.
+ *
+ * For Tesla &tm; products, and Quadro &reg; products from the Kepler family.
+ * Requires root/admin permissions. 
+ *
+ * See \ref nvmlDeviceGetSupportedMemoryClocks and \ref nvmlDeviceGetSupportedGraphicsClocks 
+ * for details on how to list available clocks combinations.
+ *
+ * After system reboot or driver reload applications clocks go back to their default value.
+ *
+ * @param device                               The identifier of the target device
+ * @param memClockMHz                          Requested memory clock in MHz
+ * @param graphicsClockMHz                     Requested graphics clock in MHz
+ * 
+ * @return 
+ *         - \ref NVML_SUCCESS                 if new settings were successfully set
+ *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device is invalid or \a memClockMHz and \a graphicsClockMHz 
+ *                                                 is not a valid clock combination
+ *         - \ref NVML_ERROR_NO_PERMISSION     if the user doesn't have permission to perform this operation 
+ *         - \ref NVML_ERROR_NOT_SUPPORTED     if the device doesn't support this feature
+ *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
+ */
+nvmlReturn_t DECLDIR nvmlDeviceSetApplicationsClocks(nvmlDevice_t device, unsigned int memClockMHz, unsigned int graphicsClockMHz);
+
+/**
+ * Set new power limit of this device.
+ * 
+ * For Tesla &tm; and Quadro &reg; products from the Kepler family.
+ * Requires root/admin permissions.
+ *
+ * See \ref nvmlDeviceGetPowerManagementLimitConstraints to check the allowed ranges of values.
+ *
+ * \note Limit is not persistent across reboots or driver unloads.
+ * Enable persistent mode to prevent driver from unloading when no application is using the device.
+ *
+ * @param device                               The identifier of the target device
+ * @param limit                                Power management limit in milliwatts to set
+ * 
+ * @return 
+ *         - \ref NVML_SUCCESS                 if \a limit has been set
+ *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device is invalid or \a defaultLimit is out of range
+ *         - \ref NVML_ERROR_NOT_SUPPORTED     if the device does not support this feature
+ *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
+ *
+ * @see nvmlDeviceGetPowerManagementLimitConstraints
+ * @see nvmlDeviceGetPowerManagementDefaultLimit
+ */
+nvmlReturn_t DECLDIR nvmlDeviceSetPowerManagementLimit(nvmlDevice_t device, unsigned int limit);
+
 /** @} */
 
 /***************************************************************************************************/
@@ -1893,7 +2380,7 @@ nvmlReturn_t DECLDIR nvmlEventSetCreate(nvmlEventSet_t *set);
  * Ecc events are available only on ECC enabled devices (see \ref nvmlDeviceGetTotalEccErrors)
  * Power capping events are available only on Power Management enabled devices (see \ref nvmlDeviceGetPowerManagementMode)
  *
- * For linux only.
+ * For Linux only.
  *
  * \b IMPORTANT: Operations on \a set are not thread safe
  *
@@ -1952,7 +2439,7 @@ nvmlReturn_t DECLDIR nvmlDeviceGetSupportedEventTypes(nvmlDevice_t device, unsig
  * 
  * @param set                                  Reference to set of events to wait on
  * @param data                                 Reference in which to return event data
- * @param timeoutms                            Maximum amount of wait time in ms for registered event
+ * @param timeoutms                            Maximum amount of wait time in milliseconds for registered event
  * 
  * @return 
  *         - \ref NVML_SUCCESS                 if the data has been set

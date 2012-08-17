@@ -108,6 +108,13 @@ my @months = qw( Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec );
 my @wdays = qw( Sun Mon Tues Wed Thur Fri Sat );
 my @enableStr = qw( Disabled Enabled );
 my @supportedStr = qw( N/A Supported );
+my @throttleReasons = (
+    [$nvmlClocksThrottleReasonGpuIdle,           "clocks_throttle_reason_gpu_idle"],
+    [$nvmlClocksThrottleReasonUserDefinedClocks, "clocks_throttle_reason_user_defined_clocks"],
+    [$nvmlClocksThrottleReasonSwPowerCap,        "clocks_throttle_reason_sw_power_cap"],
+    [$nvmlClocksThrottleReasonHwSlowdown,        "clocks_throttle_reason_hw_slowdown"],
+    [$nvmlClocksThrottleReasonUnknown,           "clocks_throttle_reason_unknown"]
+    );
 
 # The main function
 sub XmlDeviceQuery
@@ -123,7 +130,7 @@ sub XmlDeviceQuery
 
     my $strResult = "";
     $strResult .= "<?xml version=\"1.0\" ?>\n";
-    $strResult .= "<!DOCTYPE nvidia_smi_log SYSTEM \"nvsmi_device.dtd\">\n";
+    $strResult .= "<!DOCTYPE nvidia_smi_log SYSTEM \"nvsmi_device_v4.dtd\">\n";
     $strResult .= "<nvidia_smi_log>\n";
 
     my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime();
@@ -177,23 +184,13 @@ sub XmlDeviceQuery
         
         $strResult .= "    <inforom_version>\n";
         my $str;
+        ($ret, $str) = nvmlDeviceGetInforomImageVersion($handle);
+        $strResult .= "        <img_version>" . handleOutput($ret, $str) . "</img_version>\n";
         ($ret, $str) = nvmlDeviceGetInforomVersion($handle, $NVML_INFOROM_OEM);
-        if ($str eq "")
-        {
-            $str = "N/A";
-        }
         $strResult .= "        <oem_object>" . handleOutput($ret, $str) . "</oem_object>\n";
         ($ret, $str) = nvmlDeviceGetInforomVersion($handle, $NVML_INFOROM_ECC);
-        if ($str eq "")
-        {
-            $str = "N/A";
-        }
         $strResult .= "        <ecc_object>" . handleOutput($ret, $str) . "</ecc_object>\n";
         ($ret, $str) = nvmlDeviceGetInforomVersion($handle, $NVML_INFOROM_POWER);
-        if ($str eq "")
-        {
-            $str = "N/A";
-        }
         $strResult .= "        <pwr_object>" . handleOutput($ret, $str) . "</pwr_object>\n";
         $strResult .= "    </inforom_version>\n";
         
@@ -203,8 +200,8 @@ sub XmlDeviceQuery
         $strResult .= sprintf("      <pci_device>%02X</pci_device>\n", handleOutput($ret, $info->{"device"}));
         $strResult .= sprintf("      <pci_domain>%04X</pci_domain>\n", handleOutput($ret, $info->{"domain"}));
         $strResult .= sprintf("      <pci_device_id>%08X</pci_device_id>\n", (handleOutput($ret, $info->{"pciDeviceId"})));
-        $strResult .= sprintf("      <pci_sub_system_id>%08X</pci_sub_system_id>\n", (handleOutput($ret, $info->{"pciSubSystemId"})));
         $strResult .=  "      <pci_bus_id>" . handleOutput($ret, $info->{"busId"}) . "</pci_bus_id>\n";
+        $strResult .= sprintf("      <pci_sub_system_id>%08X</pci_sub_system_id>\n", (handleOutput($ret, $info->{"pciSubSystemId"})));
         $strResult .=  "      <pci_gpu_link_info>\n";
         $strResult .=  "        <pcie_gen>\n";
         $strResult .=  "          <max_link_gen>" . handleOutput(nvmlDeviceGetMaxPcieLinkGeneration($handle)) . "</max_link_gen>\n";
@@ -217,13 +214,55 @@ sub XmlDeviceQuery
         $strResult .=  "      </pci_gpu_link_info>\n";
         $strResult .=  "    </pci>\n";
         
-        $strResult .= "    <fan_speed>" . handleOutput(nvmlDeviceGetFanSpeed($handle), postfix=>' %') . "</fan_speed>";
+        $strResult .= "    <fan_speed>" . handleOutput(nvmlDeviceGetFanSpeed($handle), postfix=>' %') . "</fan_speed>\n";
+        
+        $strResult .= "    <performance_state>" . handleOutput(nvmlDeviceGetPerformanceState($handle), prefix=>'P') . "</performance_state>\n";
+        
+        my $supportedClocksThrottleReasons;
+        my $clocksThrottleReasons;
+        ($ret, $supportedClocksThrottleReasons) = nvmlDeviceGetSupportedClocksThrottleReasons($handle);
+        if ($ret == $NVML_SUCCESS)
+        {
+            ($ret, $clocksThrottleReasons) = nvmlDeviceGetCurrentClocksThrottleReasons($handle);
+        }
+        
+        if ($ret == $NVML_SUCCESS)
+        {
+            $strResult .= "    <clocks_throttle_reasons>\n";
+            foreach (@throttleReasons)
+            {
+                my $mask = @$_[0];
+                my $xmlName = @$_[1];
+                $strResult .= "      <$xmlName>";
+                if ($ret == $NVML_SUCCESS)
+                {
+                    if ($mask & $supportedClocksThrottleReasons)
+                    {
+                        $strResult .= ($mask & $clocksThrottleReasons) ? "Active" : "Not Active"; 
+                    }
+                    else
+                    {
+                        $strResult .= handleOutput($NVML_ERROR_NOT_SUPPORTED);
+                    }
+                }
+                else
+                {
+                    $strResult .= handleOutput($ret);
+                }
+                $strResult .= "</$xmlName>\n";
+            }
+            $strResult .= "    </clocks_throttle_reasons>\n";
+        }
+        else
+        {
+            $strResult .= "    <clocks_throttle_reasons>" . handleOutput($ret) . "</clocks_throttle_reasons>\n";
+        }
         
         $strResult .= "    <memory_usage>\n";
         ($ret, $info) = nvmlDeviceGetMemoryInfo($handle);
-        $strResult .= "      <total>" . handleOutput($ret, int($info->{'total'}), scale=>(1 / 1024 / 1024), format=>'%d', postfix=>' MB') . "</total>\n";
-        $strResult .= "      <used>" . handleOutput($ret, int($info->{'used'}), scale=>(1 / 1024 / 1024), format=>'%d', postfix=>' MB') . "</used>\n";
-        $strResult .= "      <free>" . handleOutput($ret, int($info->{'free'}), scale=>(1 / 1024 / 1024), format=>'%d', postfix=>' MB') . "</free>\n";
+        $strResult .= "      <total>" . handleOutput($ret, int($info->{'total'}) / 1024 / 1024, format=>'%d', postfix=>' MB') . "</total>\n";
+        $strResult .= "      <used>" . handleOutput($ret, int($info->{'used'}) / 1024 / 1024, format=>'%d', postfix=>' MB') . "</used>\n";
+        $strResult .= "      <free>" . handleOutput($ret, int($info->{'total'} / 1024 / 1024) - int($info->{'used'} / 1024 / 1024), format=>'%d', postfix=>' MB') . "</free>\n";
         $strResult .= "    </memory_usage>\n";
 
         ($ret, $mode) = nvmlDeviceGetComputeMode($handle);
@@ -242,7 +281,7 @@ sub XmlDeviceQuery
         $strResult .= "    </ecc_mode>\n";
         
         $strResult .= "    <ecc_errors>\n";
-        my @bitTypes = qw(single_bit double_bit);
+        my @errorTypes = qw(single_bit double_bit);
         my @counterTypes = qw(volatile aggregate);
         
         # enum use 0 index
@@ -250,18 +289,35 @@ sub XmlDeviceQuery
         {
             my $counter = $counterTypes[$c];
             $strResult .= "      <$counter>\n";
-            for (my $b = 0; $b < @bitTypes; $b++)
+            for (my $e = 0; $e < @errorTypes; $e++)
             {
-                my $bit = $bitTypes[$b];
-                $strResult .= "        <$bit>\n";
-                my ($retTotal, $total) = nvmlDeviceGetTotalEccErrors($handle, $b, $c);
-                ($ret, $info) = nvmlDeviceGetDetailedEccErrors($handle, $b, $c);
-                $strResult .= "          <device_memory>" . handleOutput($ret, $info->{'deviceMemory'}) . "</device_memory>\n";
-                $strResult .= "          <register_file>" . handleOutput($ret, $info->{'registerFile'}) . "</register_file>\n";
-                $strResult .= "          <l1_cache>" . handleOutput($ret, $info->{'l1Cache'}) . "</l1_cache>\n";
-                $strResult .= "          <l2_cache>" . handleOutput($ret, $info->{'l2Cache'}) . "</l2_cache>\n";
+                my $type = $errorTypes[$e];
+                $strResult .= "        <$type>\n";
+                
+                $strResult .= "          <device_memory>" . 
+                              handleOutput(nvmlDeviceGetMemoryErrorCounter($handle, $e, $c, $NVML_MEMORY_LOCATION_DEVICE_MEMORY)) .
+                              "</device_memory>\n";
+                
+                $strResult .= "          <register_file>" .
+                              handleOutput(nvmlDeviceGetMemoryErrorCounter($handle, $e, $c, $NVML_MEMORY_LOCATION_REGISTER_FILE)) .
+                              "</register_file>\n";
+                
+                $strResult .= "          <l1_cache>" .
+                              handleOutput(nvmlDeviceGetMemoryErrorCounter($handle, $e, $c, $NVML_MEMORY_LOCATION_L1_CACHE )) .
+                              "</l1_cache>\n";
+                
+                $strResult .= "          <l2_cache>" .
+                              handleOutput(nvmlDeviceGetMemoryErrorCounter($handle, $e, $c, $NVML_MEMORY_LOCATION_L2_CACHE)) .
+                              "</l2_cache>\n";
+                
+                $strResult .= "          <texture_memory>" .
+                              handleOutput(nvmlDeviceGetMemoryErrorCounter($handle, $e, $c, $NVML_MEMORY_LOCATION_TEXTURE_MEMORY)) .
+                              "</texture_memory>\n";
+                
+                my ($retTotal, $total) = nvmlDeviceGetTotalEccErrors($handle, $e, $c);
                 $strResult .= "          <total>" . handleOutput($retTotal, $total) . "</total>\n";
-                $strResult .= "        </$bit>\n";
+                
+                $strResult .= "        </$type>\n";
             }
             $strResult .= "      </$counter>\n";
         }
@@ -275,7 +331,14 @@ sub XmlDeviceQuery
         $strResult .= "      <power_state>" . handleOutput(nvmlDeviceGetPowerState($handle), prefix=>'P') . "</power_state>\n";
         $strResult .= "      <power_management>" . handleOutput(nvmlDeviceGetPowerManagementMode($handle), strings=>\@supportedStr) . "</power_management>\n";
         $strResult .= "      <power_draw>" . handleOutput(nvmlDeviceGetPowerUsage($handle), scale=>(1 / 1000), postfix=>' W', format=>'%.2f') . "</power_draw>\n";
-        $strResult .= "      <power_limit>" . handleOutput(nvmlDeviceGetPowerManagementLimit($handle), scale=>(1 / 1000), postfix=>' W', format=>'%d') . "</power_limit>\n";
+        $strResult .= "      <power_limit>" . handleOutput(nvmlDeviceGetPowerManagementLimit($handle), scale=>(1 / 1000), postfix=>' W', format=>'%.2f') . "</power_limit>\n";
+        $strResult .= "      <default_power_limit>" . handleOutput(nvmlDeviceGetPowerManagementDefaultLimit($handle), scale=>(1 / 1000), postfix=>' W', format=>'%.2f') . "</default_power_limit>\n";
+        
+        my $minPower;
+        my $maxPower;
+        ($ret, $minPower, $maxPower) = nvmlDeviceGetPowerManagementLimitConstraints($handle);
+        $strResult .= "      <min_power_limit>" . handleOutput($ret, $minPower, scale=>(1 / 1000), postfix=>' W', format=>'%.2f') . "</min_power_limit>\n";
+        $strResult .= "      <max_power_limit>" . handleOutput($ret, $maxPower, scale=>(1 / 1000), postfix=>' W', format=>'%.2f') . "</max_power_limit>\n";
         $strResult .= "    </power_readings>\n";
 
         $strResult .= "    <clocks>\n";
@@ -283,6 +346,11 @@ sub XmlDeviceQuery
         $strResult .= "      <sm_clock>" . handleOutput(nvmlDeviceGetClockInfo($handle, $NVML_CLOCK_SM), postfix=>' MHz') . "</sm_clock>\n";
         $strResult .= "      <mem_clock>" . handleOutput(nvmlDeviceGetClockInfo($handle, $NVML_CLOCK_MEM), postfix=>' MHz') . "</mem_clock>\n";
         $strResult .= "    </clocks>\n";
+        
+        $strResult .= "    <applications_clocks>\n";
+        $strResult .= "      <graphics_clock>" . handleOutput(nvmlDeviceGetApplicationsClock($handle, $NVML_CLOCK_GRAPHICS), postfix=>' MHz') . "</graphics_clock>\n";
+        $strResult .= "      <mem_clock>" . handleOutput(nvmlDeviceGetApplicationsClock($handle, $NVML_CLOCK_MEM), postfix=>' MHz') . "</mem_clock>\n";
+        $strResult .= "    </applications_clocks>\n";
 
         $strResult .= "    <max_clocks>\n";
         $strResult .= "      <graphics_clock>" . handleOutput(nvmlDeviceGetMaxClockInfo($handle, $NVML_CLOCK_GRAPHICS), postfix=>' MHz') . "</graphics_clock>\n";
@@ -290,28 +358,59 @@ sub XmlDeviceQuery
         $strResult .= "      <mem_clock>" . handleOutput(nvmlDeviceGetMaxClockInfo($handle, $NVML_CLOCK_MEM), postfix=>' MHz') . "</mem_clock>\n";
         $strResult .= "    </max_clocks>\n";
         
-        $strResult .= "    <performance_state>" . handleOutput(nvmlDeviceGetPerformanceState($handle), prefix=>'P') . "</performance_state>\n";
+        my $memClocks;
+        ($ret, $memClocks) = nvmlDeviceGetSupportedMemoryClocks($handle);
 
-        $strResult .= "    <compute_processes>\n";
+        if ($ret != $NVML_SUCCESS)
+        {
+            $strResult .= "    <supported_clocks>" . handleOutput($ret) . "</supported_clocks>\n";
+        }
+        else
+        {
+            $strResult .= "    <supported_clocks>\n";
+            foreach (@$memClocks)
+            {
+                my $m = $_;
+                my $graphicsClocks;
 
+                $strResult .= "      <supported_mem_clock>\n";
+                $strResult .= sprintf("        <value>%d MHz</value>\n", $m);
+
+                ($ret, $graphicsClocks) = nvmlDeviceGetSupportedGraphicsClocks($handle, $m);
+                if ($ret != $NVML_SUCCESS)
+                {
+                    $strResult .= "        <supported_graphics_clock>" . handleOutput($ret) . "</supported_graphics_clock>\n";
+                }
+                else
+                {
+                    foreach (@$graphicsClocks)
+                    {
+                        $strResult .= sprintf("        <supported_graphics_clock>%d MHz</supported_graphics_clock>\n", $_);
+                    }
+                }
+
+                $strResult .= "      </supported_mem_clock>\n";
+            }
+            $strResult .= "    </supported_clocks>\n";
+        }
+        
         #
         # Get compute running processes returns an array reference
         # This array is the correct size needed to contain all running compute processes
         #
-        my $procstr = "";
         my $procs;
         ($ret, $procs) = nvmlDeviceGetComputeRunningProcesses($handle);
+
         if ($ret != $NVML_SUCCESS)
         {
-            $procstr .= handleOutput($ret);
+            $strResult .= "    <compute_processes>" . handleOutput($ret) . "</compute_processes>\n";
         }
         else
         {
+            $strResult .= "    <compute_processes>\n";
             foreach (@$procs)
             {
                 my $p = $_;
-                $procstr .= '    <process_info>\n';
-                $procstr .= '      <pid>' . $p->{'pid'} . '</pid>\n';
                 my $name;
                 
                 #
@@ -328,26 +427,27 @@ sub XmlDeviceQuery
                 {
                     $name = handleError($ret);
                 }
-                $procstr .= '      <process_name>' . $name . '</process_name>\n';
-                $procstr .= '      <used_memory>';
+                
+                $strResult .= "    <process_info>\n";
+                $strResult .= "      <pid>" . $p->{'pid'} . "</pid>\n";
+                $strResult .= "      <process_name>" . $name . "</process_name>\n";
+                $strResult .= "      <used_memory>";
                 if ($p->{'usedGpuMemory'} == undef)
                 {
-                    $procstr .= 'N\A';
+                    $strResult .= 'N\A';
                 }
                 else
                 {
-                    $procstr .= ($p->{'usedGpuMemory'} / 1024 / 1024) . " MB";
+                    $strResult .= ($p->{'usedGpuMemory'} / 1024 / 1024) . " MB";
                 }
-                $procstr .= '</used_memory>\n';
-                $procstr .= '    <\process_info>\n';
+                $strResult .= "</used_memory>\n";
+                $strResult .= "    </process_info>\n";
             }
+            $strResult .= "    </compute_processes>\n";
         }
         
-        $strResult .= $procstr;
-
-        $strResult .= "    </compute_processes>\n";
-
         $strResult .= "  </gpu>\n";
+        $strResult .= "\n";
     }
 
     $strResult .= "</nvidia_smi_log>\n";

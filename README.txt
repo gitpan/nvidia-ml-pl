@@ -24,3 +24,6 @@ Version 3.295.0
 - Added new functions for NVML 3.295.  See NVML documentation for more information.
 - Updated nvidia::smi tool
 
+Version 4.304.0
+- Added new functions for NVML 4.304.  See NVML documentation for more information.
+- Updated nvidia::smi tool
