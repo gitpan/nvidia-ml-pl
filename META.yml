@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:                nvidia-ml
-version:             4.304.0
+version:             4.304.1
 abstract:            Perl bindings to the NVIDIA Management Library NVML
 license:             bsd
 generated_by:        ExtUtils::MakeMaker

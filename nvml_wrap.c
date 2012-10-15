@@ -7572,6 +7572,58 @@ XS(_wrap_nvmlDeviceGetPowerUsage) {
 }
 
 
+XS(_wrap_nvmlDeviceGetGpuOperationMode) {
+  {
+    nvmlDevice_t arg1 = (nvmlDevice_t) 0 ;
+    nvmlGpuOperationMode_t *arg2 = (nvmlGpuOperationMode_t *) 0 ;
+    nvmlGpuOperationMode_t *arg3 = (nvmlGpuOperationMode_t *) 0 ;
+    nvmlGpuOperationMode_t temp2 ;
+    int res2 = SWIG_TMPOBJ ;
+    nvmlGpuOperationMode_t temp3 ;
+    int res3 = SWIG_TMPOBJ ;
+    int argvi = 0;
+    nvmlReturn_t result;
+    dXSARGS;
+    
+    arg2 = &temp2;
+    arg3 = &temp3;
+    if ((items < 1) || (items > 1)) {
+      SWIG_croak("Usage: nvmlDeviceGetGpuOperationMode(device);");
+    }
+    {
+      // arg1 = convert(ST(0))
+      if ((SWIG_ConvertPtr(ST(0),(void **) &arg1, SWIGTYPE_p_nvmlDevice_st,0)) == -1)
+      {
+        arg1 = NULL;
+      }
+    }
+    result = (nvmlReturn_t)nvmlDeviceGetGpuOperationMode(arg1,arg2,arg3);
+    ST(argvi) = SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(result)); argvi++ ;
+    if (SWIG_IsTmpObj(res2)) {
+      if (argvi >= items) EXTEND(sp,1);  ST(argvi) = SWIG_From_unsigned_SS_int  SWIG_PERL_CALL_ARGS_1((*arg2)); argvi++  ;
+    } else {
+      int new_flags = SWIG_IsNewObj(res2) ? (SWIG_POINTER_OWN | 0) : 0;
+      if (argvi >= items) EXTEND(sp,1);  ST(argvi) = SWIG_NewPointerObj((void*)(arg2), SWIGTYPE_p_unsigned_int, new_flags); argvi++  ;
+    }
+    if (SWIG_IsTmpObj(res3)) {
+      if (argvi >= items) EXTEND(sp,1);  ST(argvi) = SWIG_From_unsigned_SS_int  SWIG_PERL_CALL_ARGS_1((*arg3)); argvi++  ;
+    } else {
+      int new_flags = SWIG_IsNewObj(res3) ? (SWIG_POINTER_OWN | 0) : 0;
+      if (argvi >= items) EXTEND(sp,1);  ST(argvi) = SWIG_NewPointerObj((void*)(arg3), SWIGTYPE_p_unsigned_int, new_flags); argvi++  ;
+    }
+    
+    
+    
+    XSRETURN(argvi);
+  fail:
+    
+    
+    
+    SWIG_croak_null();
+  }
+}
+
+
 XS(_wrap_nvmlDeviceGetMemoryInfo) {
   {
     nvmlDevice_t arg1 = (nvmlDevice_t) 0 ;
@@ -8449,6 +8501,44 @@ XS(_wrap_nvmlDeviceSetPowerManagementLimit) {
 }
 
 
+XS(_wrap_nvmlDeviceSetGpuOperationMode) {
+  {
+    nvmlDevice_t arg1 = (nvmlDevice_t) 0 ;
+    nvmlGpuOperationMode_t arg2 ;
+    unsigned int val2 ;
+    int ecode2 = 0 ;
+    int argvi = 0;
+    nvmlReturn_t result;
+    dXSARGS;
+    
+    if ((items < 2) || (items > 2)) {
+      SWIG_croak("Usage: nvmlDeviceSetGpuOperationMode(device,mode);");
+    }
+    {
+      // arg1 = convert(ST(0))
+      if ((SWIG_ConvertPtr(ST(0),(void **) &arg1, SWIGTYPE_p_nvmlDevice_st,0)) == -1)
+      {
+        arg1 = NULL;
+      }
+    }
+    ecode2 = SWIG_AsVal_unsigned_SS_int SWIG_PERL_CALL_ARGS_2(ST(1), &val2);
+    if (!SWIG_IsOK(ecode2)) {
+      SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "nvmlDeviceSetGpuOperationMode" "', argument " "2"" of type '" "nvmlGpuOperationMode_t""'");
+    } 
+    arg2 = (nvmlGpuOperationMode_t)(val2);
+    result = (nvmlReturn_t)nvmlDeviceSetGpuOperationMode(arg1,arg2);
+    ST(argvi) = SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(result)); argvi++ ;
+    
+    
+    XSRETURN(argvi);
+  fail:
+    
+    
+    SWIG_croak_null();
+  }
+}
+
+
 XS(_wrap_nvmlEventSetCreate) {
   {
     nvmlEventSet_t *arg1 = (nvmlEventSet_t *) 0 ;
@@ -9249,7 +9339,7 @@ static swig_type_info _swigt__p_nvmlUtilization_st = {"_p_nvmlUtilization_st", "
 static swig_type_info _swigt__p_p_nvmlDevice_st = {"_p_p_nvmlDevice_st", "struct nvmlDevice_st **|nvmlDevice_t *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_p_nvmlEventSet_st = {"_p_p_nvmlEventSet_st", "struct nvmlEventSet_st **|nvmlEventSet_t *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_p_nvmlUnit_st = {"_p_p_nvmlUnit_st", "nvmlUnit_t *|struct nvmlUnit_st **", 0, 0, (void*)0, 0};
-static swig_type_info _swigt__p_unsigned_int = {"_p_unsigned_int", "unsigned int *|nvmlDriverModel_t *|nvmlClockType_t *|nvmlPstates_t *|nvmlEnableState_t *|nvmlComputeMode_t *", 0, 0, (void*)0, 0};
+static swig_type_info _swigt__p_unsigned_int = {"_p_unsigned_int", "unsigned int *|nvmlDriverModel_t *|nvmlClockType_t *|nvmlPstates_t *|nvmlEnableState_t *|nvmlGpuOperationMode_t *|nvmlComputeMode_t *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_unsigned_long_long = {"_p_unsigned_long_long", "unsigned long long *", 0, 0, (void*)0, 0};
 
 static swig_type_info *swig_type_initial[] = {
@@ -9521,6 +9611,7 @@ static swig_command_info swig_commands[] = {
 {"bindingsc::nvmlDeviceGetPowerManagementLimitConstraints", _wrap_nvmlDeviceGetPowerManagementLimitConstraints},
 {"bindingsc::nvmlDeviceGetPowerManagementDefaultLimit", _wrap_nvmlDeviceGetPowerManagementDefaultLimit},
 {"bindingsc::nvmlDeviceGetPowerUsage", _wrap_nvmlDeviceGetPowerUsage},
+{"bindingsc::nvmlDeviceGetGpuOperationMode", _wrap_nvmlDeviceGetGpuOperationMode},
 {"bindingsc::nvmlDeviceGetMemoryInfo", _wrap_nvmlDeviceGetMemoryInfo},
 {"bindingsc::nvmlDeviceGetComputeMode", _wrap_nvmlDeviceGetComputeMode},
 {"bindingsc::nvmlDeviceGetEccMode", _wrap_nvmlDeviceGetEccMode},
@@ -9540,6 +9631,7 @@ static swig_command_info swig_commands[] = {
 {"bindingsc::nvmlDeviceSetDriverModel", _wrap_nvmlDeviceSetDriverModel},
 {"bindingsc::nvmlDeviceSetApplicationsClocks", _wrap_nvmlDeviceSetApplicationsClocks},
 {"bindingsc::nvmlDeviceSetPowerManagementLimit", _wrap_nvmlDeviceSetPowerManagementLimit},
+{"bindingsc::nvmlDeviceSetGpuOperationMode", _wrap_nvmlDeviceSetGpuOperationMode},
 {"bindingsc::nvmlEventSetCreate", _wrap_nvmlEventSetCreate},
 {"bindingsc::nvmlDeviceRegisterEvents", _wrap_nvmlDeviceRegisterEvents},
 {"bindingsc::nvmlDeviceGetSupportedEventTypes", _wrap_nvmlDeviceGetSupportedEventTypes},
@@ -10057,6 +10149,21 @@ XS(SWIG_init) {
   /*@SWIG:/usr/share/swig/2.0.1/perl5/perltypemaps.swg,65,%set_constant@*/ do {
     SV *sv = get_sv((char*) SWIG_prefix "NVML_PSTATE_UNKNOWN", TRUE | 0x2 | GV_ADDMULTI);
     sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(NVML_PSTATE_UNKNOWN)));
+    SvREADONLY_on(sv);
+  } while(0) /*@SWIG@*/;
+  /*@SWIG:/usr/share/swig/2.0.1/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+    SV *sv = get_sv((char*) SWIG_prefix "NVML_GOM_ALL_ON", TRUE | 0x2 | GV_ADDMULTI);
+    sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(NVML_GOM_ALL_ON)));
+    SvREADONLY_on(sv);
+  } while(0) /*@SWIG@*/;
+  /*@SWIG:/usr/share/swig/2.0.1/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+    SV *sv = get_sv((char*) SWIG_prefix "NVML_GOM_COMPUTE", TRUE | 0x2 | GV_ADDMULTI);
+    sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(NVML_GOM_COMPUTE)));
+    SvREADONLY_on(sv);
+  } while(0) /*@SWIG@*/;
+  /*@SWIG:/usr/share/swig/2.0.1/perl5/perltypemaps.swg,65,%set_constant@*/ do {
+    SV *sv = get_sv((char*) SWIG_prefix "NVML_GOM_LOW_DP", TRUE | 0x2 | GV_ADDMULTI);
+    sv_setsv(sv, SWIG_From_int  SWIG_PERL_CALL_ARGS_1((int)(NVML_GOM_LOW_DP)));
     SvREADONLY_on(sv);
   } while(0) /*@SWIG@*/;
   /*@SWIG:/usr/share/swig/2.0.1/perl5/perltypemaps.swg,65,%set_constant@*/ do {

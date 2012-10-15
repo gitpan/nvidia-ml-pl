@@ -73,6 +73,7 @@ our @EXPORT_OK =
      nvmlDeviceGetPciInfo_v2
      nvmlDeviceGetPerformanceState
      nvmlDeviceGetPersistenceMode
+     nvmlDeviceGetGpuOperationMode
      nvmlDeviceGetPowerManagementDefaultLimit
      nvmlDeviceGetPowerManagementLimit
      nvmlDeviceGetPowerManagementLimitConstraints
@@ -97,6 +98,7 @@ our @EXPORT_OK =
      nvmlDeviceSetDriverModel
      nvmlDeviceSetEccMode
      nvmlDeviceSetPersistenceMode
+     nvmlDeviceSetGpuOperationMode
      nvmlDeviceSetPowerManagementLimit
      nvmlDeviceValidateInforom
      nvmlErrorString
@@ -203,6 +205,9 @@ our @EXPORT_OK =
      $NVML_DEVICE_NAME_BUFFER_SIZE
      $NVML_DEVICE_SERIAL_BUFFER_SIZE
      $NVML_DEVICE_VBIOS_VERSION_BUFFER_SIZE
+     $NVML_GOM_ALL_ON
+     $NVML_GOM_COMPUTE
+     $NVML_GOM_LOW_DP
      $nvmlClocksThrottleReasonGpuIdle
      $nvmlClocksThrottleReasonUserDefinedClocks
      $nvmlClocksThrottleReasonSwPowerCap
@@ -513,6 +518,8 @@ sub nvmlDeviceGetPciInfo
 
 *nvmlDeviceGetPerformanceState     = *nvidia::ml::bindings::nvmlDeviceGetPerformanceState;
 
+*nvmlDeviceGetGpuOperationMode = *nvidia::ml::bindings::nvmlDeviceGetGpuOperationMode;
+
 *nvmlDeviceGetPowerManagementMode  = *nvidia::ml::bindings::nvmlDeviceGetPowerManagementMode;
 *nvmlDeviceGetPowerManagementLimit = *nvidia::ml::bindings::nvmlDeviceGetPowerManagementLimit;
 *nvmlDeviceGetPowerManagementLimitConstraints = *nvidia::ml::bindings::nvmlDeviceGetPowerManagementLimitConstraints;
@@ -740,6 +747,7 @@ sub nvmlDeviceGetSupportedGraphicsClocks
 *nvmlDeviceClearEccErrorCounts = *nvidia::ml::bindings::nvmlDeviceClearEccErrorCounts;
 *nvmlDeviceSetDriverModel      = *nvidia::ml::bindings::nvmlDeviceSetDriverModel;
 *nvmlDeviceSetApplicationsClocks      = *nvidia::ml::bindings::nvmlDeviceSetApplicationsClocks;
+*nvmlDeviceSetGpuOperationMode = *nvidia::ml::bindings::nvmlDeviceSetGpuOperationMode;
 *nvmlDeviceSetPowerManagementLimit = *nvidia::ml::bindings::nvmlDeviceSetPowerManagementLimit;
 
 *nvmlDeviceValidateInforom     = *nvidia::ml::bindings::nvmlDeviceValidateInforom;

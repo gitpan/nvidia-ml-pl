@@ -51,11 +51,15 @@ Supported OS platforms:
 
 Supported products:
 - Full Support
-    - NVIDIA Tesla &tm; Line:   S1070, S2050, C1060, C2050/70/75, M2050/70/75/90, X2070/90, K10, K20
-    - NVIDIA Quadro &reg; Line:  4000, 5000, 6000, 7000, M2070-Q
+    - NVIDIA Tesla &tm; Line:
+            S2050, C2050, C2070, C2075,
+            M2050, M2070, M2075, M2090,
+            X2070, X2090,
+            K10, K20, K20X
+    - NVIDIA Quadro &reg; Line: 4000, 5000, 6000, 7000, M2070-Q, 600, 2000, 3000M and 410
     - NVIDIA GeForce &reg; Line: None
 - Limited Support
-    - NVIDIA Tesla &tm; Line:   None
+    - NVIDIA Tesla &tm; Line:    S1070, C1060, M1060
     - NVIDIA Quadro &reg; Line:  All other current and previous generation Quadro-branded parts
     - NVIDIA GeForce &reg; Line: All current and previous generation GeForce-branded parts
 
@@ -359,6 +363,24 @@ typedef enum nvmlPStates_enum
     NVML_PSTATE_15              = 15,      //!< Performance state 15 -- Minimum Performance 
     NVML_PSTATE_UNKNOWN         = 32       //!< Unknown performance state
 } nvmlPstates_t;
+
+/**
+ * GPU Operation Mode
+ *
+ * GOM allows to reduce power usage and optimize GPU throughput by disabling GPU features.
+ *
+ * Each GOM is designed to meet specific user needs.
+ */
+typedef enum nvmlGom_enum
+{
+    NVML_GOM_ALL_ON                    = 0, //!< Everything is enabled and running at full speed
+
+    NVML_GOM_COMPUTE                   = 1, //!< Designed for running only compute tasks. Graphics operations
+                                            //!< are not allowed
+
+    NVML_GOM_LOW_DP                    = 2  //!< Designed for running graphics applications that don't require
+                                            //!< high bandwidth double precision
+} nvmlGpuOperationMode_t;
 
 /** 
  * Available infoROM objects.
@@ -1771,8 +1793,7 @@ nvmlReturn_t DECLDIR nvmlDeviceGetPowerManagementLimitConstraints(nvmlDevice_t d
 nvmlReturn_t DECLDIR nvmlDeviceGetPowerManagementDefaultLimit(nvmlDevice_t device, unsigned int *defaultLimit);
 
 /**
- * Retrieves the power usage reading for the device, in milliwatts. This is the power draw for the entire 
- * board, including GPU, memory, etc.
+ * Retrieves power usage for this GPU in milliwatts and its associated circuitry (e.g. memory)
  *
  * For "GF11x" Tesla &tm; and Quadro &reg; products from the Fermi family.
  *     - Requires \a NVML_INFOROM_POWER version 3.0 or higher.
@@ -1780,8 +1801,9 @@ nvmlReturn_t DECLDIR nvmlDeviceGetPowerManagementDefaultLimit(nvmlDevice_t devic
  * For Tesla &tm; and Quadro &reg; products from the Kepler family.
  *     - Does not require \a NVML_INFOROM_POWER object.
  *
- * The reading is accurate to within a range of +/- 5 watts. It is only available if power management mode
- * is supported. See \ref nvmlDeviceGetPowerManagementMode.
+ * On Fermi and Kepler GPUs the reading is accurate to within +/- 5% of current power draw.
+ *
+ * It is only available if power management mode is supported. See \ref nvmlDeviceGetPowerManagementMode.
  *
  * @param device                               The identifier of the target device
  * @param power                                Reference in which to return the power usage information
@@ -1794,6 +1816,28 @@ nvmlReturn_t DECLDIR nvmlDeviceGetPowerManagementDefaultLimit(nvmlDevice_t devic
  *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
  */
 nvmlReturn_t DECLDIR nvmlDeviceGetPowerUsage(nvmlDevice_t device, unsigned int *power);
+
+/**
+ * Retrieves the current GOM and pending GOM (the one that GPU will switch to after reboot).
+ *
+ * For GK110 M-class and X-class Tesla &tm; products from the Kepler family.
+ * Not supported on Quadro &reg; and Tesla &tm; C-class products.
+ *
+ * @param device                               The identifier of the target device
+ * @param current                              Reference in which to return the current GOM
+ * @param pending                              Reference in which to return the pending GOM
+ * 
+ * @return 
+ *         - \ref NVML_SUCCESS                 if \a mode has been populated
+ *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device is invalid or \a current or \a pending is NULL
+ *         - \ref NVML_ERROR_NOT_SUPPORTED     if the device does not support this feature
+ *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
+ *
+ * @see nvmlGpuOperationMode_t
+ * @see nvmlDeviceSetGpuOperationMode
+ */
+nvmlReturn_t DECLDIR nvmlDeviceGetGpuOperationMode(nvmlDevice_t device, nvmlGpuOperationMode_t *current, nvmlGpuOperationMode_t *pending);
 
 /**
  * Retrieves the amount of used, free and total memory available on the device, in bytes.
@@ -2267,7 +2311,10 @@ nvmlReturn_t DECLDIR nvmlDeviceClearEccErrorCounts(nvmlDevice_t device, nvmlEccC
  *
  * This operation takes effect after the next reboot.
  * 
- * Under windows driver model may only be set to WDDM when running in DEFAULT compute mode.
+ * Windows driver model may only be set to WDDM when running in DEFAULT compute mode.
+ *
+ * Change driver model to WDDM is not supported when GPU doesn't support graphics acceleration or 
+ * will not support it after reboot. See \ref nvmlDeviceSetGpuOperationMode.
  *
  * See \ref nvmlDriverModel_t for details on available driver models.
  * See \ref nvmlFlagDefault and \ref nvmlFlagForce
@@ -2346,6 +2393,35 @@ nvmlReturn_t DECLDIR nvmlDeviceSetApplicationsClocks(nvmlDevice_t device, unsign
  * @see nvmlDeviceGetPowerManagementDefaultLimit
  */
 nvmlReturn_t DECLDIR nvmlDeviceSetPowerManagementLimit(nvmlDevice_t device, unsigned int limit);
+
+/**
+ * Sets new GOM. See \a nvmlGpuOperationMode_t for details.
+ *
+ * For GK110 M-class and X-class Tesla &tm; products from the Kepler family.
+ * Not supported on Quadro &reg; and Tesla &tm; C-class products.
+ * Requires root/admin permissions.
+ * 
+ * Changing GOMs requires a reboot. 
+ * The reboot requirement might be removed in the future.
+ *
+ * Compute only GOMs don't support graphics acceleration. Under windows switching to these GOMs when
+ * pending driver model is WDDM is not supported. See \ref nvmlDeviceSetDriverModel.
+ * 
+ * @param device                               The identifier of the target device
+ * @param mode                                 Target GOM
+ * 
+ * @return 
+ *         - \ref NVML_SUCCESS                 if \a mode has been set
+ *         - \ref NVML_ERROR_UNINITIALIZED     if the library has not been successfully initialized
+ *         - \ref NVML_ERROR_INVALID_ARGUMENT  if \a device is invalid or \a mode incorrect
+ *         - \ref NVML_ERROR_NOT_SUPPORTED     if the device does not support GOM or specific mode
+ *         - \ref NVML_ERROR_NO_PERMISSION     if the user doesn't have permission to perform this operation
+ *         - \ref NVML_ERROR_UNKNOWN           on any unexpected error
+ *
+ * @see nvmlGpuOperationMode_t
+ * @see nvmlDeviceGetGpuOperationMode
+ */
+nvmlReturn_t DECLDIR nvmlDeviceSetGpuOperationMode(nvmlDevice_t device, nvmlGpuOperationMode_t mode);
 
 /** @} */
 

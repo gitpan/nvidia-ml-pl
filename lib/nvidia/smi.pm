@@ -108,6 +108,7 @@ my @months = qw( Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec );
 my @wdays = qw( Sun Mon Tues Wed Thur Fri Sat );
 my @enableStr = qw( Disabled Enabled );
 my @supportedStr = qw( N/A Supported );
+my @goms = ('All On', 'Compute', 'Low Double Precision');
 my @throttleReasons = (
     [$nvmlClocksThrottleReasonGpuIdle,           "clocks_throttle_reason_gpu_idle"],
     [$nvmlClocksThrottleReasonUserDefinedClocks, "clocks_throttle_reason_user_defined_clocks"],
@@ -193,6 +194,12 @@ sub XmlDeviceQuery
         ($ret, $str) = nvmlDeviceGetInforomVersion($handle, $NVML_INFOROM_POWER);
         $strResult .= "        <pwr_object>" . handleOutput($ret, $str) . "</pwr_object>\n";
         $strResult .= "    </inforom_version>\n";
+        
+        $strResult .= "    <gpu_operation_mode>\n";
+        ($ret, $current, $pending) = nvmlDeviceGetGpuOperationMode($handle);
+        $strResult .= "      <current_gom>" . handleOutput($ret, $current, strings=>\@goms) . "</current_gom>\n";
+        $strResult .= "      <pending_gom>" . handleOutput($ret, $pending, strings=>\@goms) . "</pending_gom>\n";
+        $strResult .= "    </gpu_operation_mode>\n";
         
         $strResult .= "    <pci>\n";
         ($ret, $info) = nvmlDeviceGetPciInfo($handle);
