@@ -1508,7 +1508,7 @@ nvmlReturn_t DECLDIR nvmlDeviceGetApplicationsClock(nvmlDevice_t device, nvmlClo
  * Default value is constant, but the current value an be changed using \ref nvmlDeviceSetApplicationsClocks.
  *
  * @see nvmlDeviceGetApplicationsClock
- * @see nvmlDeviceSetApplicationsClock
+ * @see nvmlDeviceSetApplicationsClocks
  *
  * For Tesla &tm; products, and Quadro &reg; products from the Kepler family.
  *

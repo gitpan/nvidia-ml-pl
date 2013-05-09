@@ -535,9 +535,9 @@ sub nvmlDeviceGetMemoryInfo
     my %infohash = ();
     if ($ret == $nvidia::ml::bindings::NVML_SUCCESS)
     {
-        $infohash{'total'} = $info->swig_total_get();
-        $infohash{'free'}  = $info->swig_free_get();
-        $infohash{'used'}  = $info->swig_used_get();
+        $infohash{'total'} = int($info->swig_total_get());
+        $infohash{'free'}  = int($info->swig_free_get());
+        $infohash{'used'}  = int($info->swig_used_get());
     }
     
     # C free
@@ -548,8 +548,35 @@ sub nvmlDeviceGetMemoryInfo
 
 *nvmlDeviceGetComputeMode        = *nvidia::ml::bindings::nvmlDeviceGetComputeMode;
 *nvmlDeviceGetEccMode            = *nvidia::ml::bindings::nvmlDeviceGetEccMode;
-*nvmlDeviceGetTotalEccErrors     = *nvidia::ml::bindings::nvmlDeviceGetTotalEccErrors;
-*nvmlDeviceGetMemoryErrorCounter = *nvidia::ml::bindings::nvmlDeviceGetMemoryErrorCounter;
+
+sub nvmlDeviceGetTotalEccErrors
+{
+    my $handle = shift;
+    my $errorType = shift;
+    my $counterType = shift;
+    my ($ret, $count) = nvidia::ml::bindings::nvmlDeviceGetTotalEccErrors($handle, $errorType, $counterType);
+    if ($ret == $nvidia::ml::bindings::NVML_SUCCESS)
+    {
+        $count = int($count);
+    }
+    return ($ret, $count);
+}
+
+sub nvmlDeviceGetMemoryErrorCounter
+{
+    my $handle = shift;
+    my $errorType = shift;
+    my $counterType = shift;
+    my $locationType = shift;
+    
+    my ($ret, $count) = nvidia::ml::bindings::nvmlDeviceGetMemoryErrorCounter($handle, $errorType,
+        $counterType, $locationType);
+    if ($ret == $nvidia::ml::bindings::NVML_SUCCESS)
+    {
+        $count = int($count);
+    }
+    return ($ret, $count);
+}
 
 # This is deprecated, instead use nvmlDeviceGetMemoryErrorCounter
 sub nvmlDeviceGetDetailedEccErrors
@@ -563,10 +590,10 @@ sub nvmlDeviceGetDetailedEccErrors
     my %infohash = ();
     if ($ret == $nvidia::ml::bindings::NVML_SUCCESS)
     {
-        $infohash{'l1Cache'}      = $info->swig_l1Cache_get();
-        $infohash{'l2Cache'}      = $info->swig_l2Cache_get();
-        $infohash{'deviceMemory'} = $info->swig_deviceMemory_get();
-        $infohash{'registerFile'} = $info->swig_registerFile_get();
+        $infohash{'l1Cache'}      = int($info->swig_l1Cache_get());
+        $infohash{'l2Cache'}      = int($info->swig_l2Cache_get());
+        $infohash{'deviceMemory'} = int($info->swig_deviceMemory_get());
+        $infohash{'registerFile'} = int($info->swig_registerFile_get());
     }
     
     # C free
@@ -642,9 +669,9 @@ sub nvmlDeviceGetComputeRunningProcesses
             
             my %infohash = ();
             $infohash{'pid'}           = $proc->swig_pid_get();
-            $infohash{'usedGpuMemory'} = $proc->swig_usedGpuMemory_get();
+            $infohash{'usedGpuMemory'} = int($proc->swig_usedGpuMemory_get());
             
-            if ($infohash{'usedGpuMemory'} == nvidia::ml::bindings::_nvmlGetValueNotAvailable_ulonglong())
+            if ($infohash{'usedGpuMemory'} == int(nvidia::ml::bindings::_nvmlGetValueNotAvailable_ulonglong()))
             {
                 # set to undef instead
                 $infohash{'usedGpuMemory'} = undef;
@@ -755,7 +782,16 @@ sub nvmlDeviceGetSupportedGraphicsClocks
 # events
 *nvmlEventSetCreate               = *nvidia::ml::bindings::nvmlEventSetCreate;
 *nvmlDeviceRegisterEvents         = *nvidia::ml::bindings::nvmlDeviceRegisterEvents;
-*nvmlDeviceGetSupportedEventTypes = *nvidia::ml::bindings::nvmlDeviceGetSupportedEventTypes;
+sub nvmlDeviceGetSupportedEventTypes
+{
+    my $handle = shift;
+    my ($ret, $types) = nvidia::ml::bindings::nvmlDeviceGetSupportedEventTypes($handle);
+    if ($ret == $nvidia::ml::bindings::NVML_SUCCESS)
+    {
+        $types = int($types);
+    }
+    return ($ret, $types);
+}
 
 sub nvmlEventSetWait
 {
@@ -771,8 +807,8 @@ sub nvmlEventSetWait
     {
         my %infohash = ();
         $infohash{'device'}           = $data->swig_device_get();
-        $infohash{'eventType'}        = $data->swig_eventType_get();
-        $infohash{'reserved'}         = $data->swig_reserved_get();
+        $infohash{'eventType'}        = int($data->swig_eventType_get());
+        $infohash{'reserved'}         = int($data->swig_reserved_get());
         $retVal = \%infohash;
     }
     $data->DESTROY();
@@ -786,8 +822,28 @@ sub nvmlEventSetWait
 *nvmlDeviceGetCurrPcieLinkGeneration    = *nvidia::ml::bindings::nvmlDeviceGetCurrPcieLinkGeneration;
 *nvmlDeviceGetMaxPcieLinkWidth          = *nvidia::ml::bindings::nvmlDeviceGetMaxPcieLinkWidth;
 *nvmlDeviceGetCurrPcieLinkWidth         = *nvidia::ml::bindings::nvmlDeviceGetCurrPcieLinkWidth;
-*nvmlDeviceGetCurrentClocksThrottleReasons   = *nvidia::ml::bindings::nvmlDeviceGetCurrentClocksThrottleReasons;
-*nvmlDeviceGetSupportedClocksThrottleReasons = *nvidia::ml::bindings::nvmlDeviceGetSupportedClocksThrottleReasons;
+
+sub nvmlDeviceGetSupportedClocksThrottleReasons
+{
+    my $handle = shift;
+    my ($ret, $reasons) = nvidia::ml::bindings::nvmlDeviceGetSupportedClocksThrottleReasons($handle);
+    if ($ret == $nvidia::ml::bindings::NVML_SUCCESS)
+    {
+        $reasons = int($reasons);
+    }
+    return ($ret, $reasons);
+}
+
+sub nvmlDeviceGetCurrentClocksThrottleReasons
+{
+    my $handle = shift;
+    my ($ret, $reasons) = nvidia::ml::bindings::nvmlDeviceGetCurrentClocksThrottleReasons($handle);
+    if ($ret == $nvidia::ml::bindings::NVML_SUCCESS)
+    {
+        $reasons = int($reasons);
+    }
+    return ($ret, $reasons);
+}
 
 1;
 
